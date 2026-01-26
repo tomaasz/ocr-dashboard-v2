@@ -1,0 +1,35 @@
+[Unit]
+Description=OCR Web Dashboard
+After=network.target postgresql.service
+
+[Service]
+User=tomaasz
+Group=tomaasz
+WorkingDirectory=/home/tomaasz/ocr-dashboard-v2
+Environment="PATH=/home/tomaasz/ocr-dashboard-v2/venv/bin:/usr/bin"
+Environment="PYTHONPATH=/home/tomaasz/ocr-dashboard-v2"
+# Note: %% is used to escape % in systemd unit files
+Environment="OCR_PG_DSN=postgresql://tomaasz:123Karinka!%%40%%23@127.0.0.1:5432/ocr"
+
+# Desktop SSH (Windows -> WSL)
+Environment="OCR_REMOTE_DESKTOP_HOST=1dtw2.tail7319.ts.net"
+Environment="OCR_REMOTE_DESKTOP_USER=tomaa"
+Environment="OCR_REMOTE_DESKTOP_REPO_DIR=C:\\Dev\\ocr-dashboard-v2"
+Environment="OCR_REMOTE_DESKTOP_SOURCE_DIR=W:\\Sources\\Nurskie dokumenty"
+Environment="OCR_REMOTE_DESKTOP_WSL_DISTRO=Ubuntu-24.04"
+Environment="OCR_WSL_SHARE_PROFILE=1"
+Environment="OCR_REMOTE_DESKTOP_SSH_OPTS=-i /home/tomaasz/.ssh/ocr_desktop -o BatchMode=yes -o ConnectTimeout=8"
+
+# WSL SSH (WSL has its own sshd, exposed on port 2222)
+Environment="OCR_REMOTE_HOST=1dtw2.tail7319.ts.net"
+Environment="OCR_REMOTE_USER=tomaasz"
+Environment="OCR_REMOTE_REPO_DIR=/home/tomaasz/ocr-dashboard-v2"
+Environment="OCR_REMOTE_SOURCE_DIR=/mnt/nas_genealogy/Sources/Nurskie dokumenty/1_43_0_2 Nurskie ziemskie relacje oblaty/1/"
+Environment="OCR_REMOTE_SSH_OPTS=-p 2222"
+
+ExecStart=/home/tomaasz/ocr-dashboard-v2/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 9090
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

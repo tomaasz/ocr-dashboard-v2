@@ -4,6 +4,7 @@ OCR Dashboard V2 - FastAPI Application Entry Point
 
 import time
 from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 

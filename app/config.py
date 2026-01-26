@@ -5,7 +5,6 @@ Centralized configuration from environment variables.
 
 import os
 from pathlib import Path
-from typing import Optional
 
 
 def _get_int(env_names: list[str], fallback: int) -> int:
@@ -21,7 +20,7 @@ def _get_int(env_names: list[str], fallback: int) -> int:
 
 # Paths
 BASE_DIR = Path(__file__).parents[1]
-CACHE_DIR = Path.home() / ".cache" / "ocr-stare-dokumenty"
+CACHE_DIR = Path.home() / ".cache" / "ocr-dashboard-v2"
 LOGS_DIR = BASE_DIR / "logs"
 
 # Ensure directories exist
@@ -32,7 +31,7 @@ LOGS_DIR.mkdir(parents=True, exist_ok=True)
 SERVER_PORT = int(os.environ.get("OCR_DASHBOARD_PORT", "9090"))
 
 # PostgreSQL
-PG_DSN: Optional[str] = os.environ.get("OCR_PG_DSN")
+PG_DSN: str | None = os.environ.get("OCR_PG_DSN")
 
 # Worker Defaults
 DEFAULT_WORKERS = _get_int(["OCR_DEFAULT_WORKERS", "OCR_WORKERS"], 2)
@@ -82,9 +81,15 @@ LIMIT_WORKER_URL = os.environ.get("LIMIT_WORKER_URL")
 LIMIT_WORKER_URL_REMOTE = os.environ.get("LIMIT_WORKER_URL_REMOTE") or LIMIT_WORKER_URL
 
 # Update Counts
-UPDATE_COUNTS_ON_START = os.environ.get("OCR_UPDATE_COUNTS_ON_START", "1").strip().lower() in ("1", "true", "yes")
+UPDATE_COUNTS_ON_START = os.environ.get("OCR_UPDATE_COUNTS_ON_START", "1").strip().lower() in (
+    "1",
+    "true",
+    "yes",
+)
 try:
-    UPDATE_COUNTS_MIN_INTERVAL_SEC = int(os.environ.get("OCR_UPDATE_COUNTS_MIN_INTERVAL_SEC", "900").strip())
+    UPDATE_COUNTS_MIN_INTERVAL_SEC = int(
+        os.environ.get("OCR_UPDATE_COUNTS_MIN_INTERVAL_SEC", "900").strip()
+    )
 except Exception:
     UPDATE_COUNTS_MIN_INTERVAL_SEC = 900
 

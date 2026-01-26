@@ -3,11 +3,8 @@ OCR Dashboard V2 - Profile Service
 Profile management business logic.
 """
 
-import json
 import shutil
-import time
 from pathlib import Path
-from typing import Optional
 
 from ..config import CACHE_DIR
 
@@ -17,11 +14,11 @@ def list_profiles(include_default: bool = False) -> list[str]:
     default_dir = CACHE_DIR / "gemini-profile"
     default_hidden_marker = CACHE_DIR / ".hide_default_profile"
     profiles: list[str] = []
-    
+
     try:
         if include_default and default_dir.is_dir() and not default_hidden_marker.exists():
             profiles.append("default")
-        
+
         if CACHE_DIR.exists():
             for d in CACHE_DIR.iterdir():
                 if d.is_dir() and d.name.startswith("gemini-profile-"):
@@ -31,7 +28,7 @@ def list_profiles(include_default: bool = False) -> list[str]:
                     profiles.append(suffix)
     except Exception:
         return []
-    
+
     return sorted(set(p for p in profiles if p))
 
 
@@ -50,10 +47,10 @@ def profile_exists(profile_name: str) -> bool:
 def create_profile(name: str) -> tuple[bool, str]:
     """Create a new profile directory."""
     profile_dir = get_profile_dir(name)
-    
+
     if profile_dir.exists():
         return False, f"Profil '{name}' już istnieje"
-    
+
     try:
         profile_dir.mkdir(parents=True, exist_ok=True)
         return True, f"Utworzono profil '{name}'"
@@ -65,30 +62,43 @@ def delete_profile(name: str) -> tuple[bool, str]:
     """Delete a profile directory."""
     if name == "default":
         return False, "Nie można usunąć domyślnego profilu"
-    
+
     profile_dir = get_profile_dir(name)
-    
+
     if not profile_dir.exists():
         return False, f"Profil '{name}' nie istnieje"
-    
+
     try:
+        # Security check: Ensure we are deleting a directory inside CACHE_DIR
+        resolved_profile_dir = profile_dir.resolve()
+        resolved_cache_dir = CACHE_DIR.resolve()
+
+        if (
+            not resolved_profile_dir.is_relative_to(resolved_cache_dir)
+            or resolved_profile_dir == resolved_cache_dir
+        ):
+            return (
+                False,
+                f"Błąd bezpieczeństwa: Próba usunięcia katalogu spoza cache: {profile_dir}",
+            )
+
         shutil.rmtree(profile_dir)
         return True, f"Usunięto profil '{name}'"
     except Exception as e:
         return False, f"Błąd usuwania profilu: {e}"
 
 
-def get_active_chrome_profile(profile_name: str) -> Optional[str]:
+def get_active_chrome_profile(profile_name: str) -> str | None:
     """Get the active Chrome profile directory for a profile."""
     profile_dir = get_profile_dir(profile_name)
     active_file = profile_dir / ".active_chrome_profile"
-    
+
     if active_file.exists():
         try:
             return active_file.read_text(encoding="utf-8").strip()
         except Exception:
             pass
-    
+
     # Fallback: find most recently used profile
     if profile_dir.exists():
         try:
@@ -96,8 +106,9 @@ def get_active_chrome_profile(profile_name: str) -> Optional[str]:
             for d in profile_dir.iterdir():
                 if d.is_dir() and (d.name == "Default" or d.name.startswith("Profile ")):
                     candidates.append(d)
-            
+
             if candidates:
+
                 def cookie_mtime(p: Path) -> float:
                     cookies = p / "Cookies"
                     try:
@@ -107,17 +118,21 @@ def get_active_chrome_profile(profile_name: str) -> Optional[str]:
                             return p.stat().st_mtime
                         except Exception:
                             return 0.0
-                
+
                 latest = max(candidates, key=cookie_mtime)
                 return latest.name
         except Exception:
             pass
-    
+
     return None
 
 
 def clear_profile_cache(profile_dir: Path) -> None:
     """Clear browser cache from profile directory."""
+    # Security check
+    if not profile_dir.resolve().is_relative_to(CACHE_DIR.resolve()):
+        return
+
     cache_patterns = [
         "Default/Cache",
         "Default/Code Cache",
@@ -128,7 +143,7 @@ def clear_profile_cache(profile_dir: Path) -> None:
         "GrShaderCache",
         "ShaderCache",
     ]
-    
+
     for pattern in cache_patterns:
         for match in profile_dir.glob(pattern):
             try:

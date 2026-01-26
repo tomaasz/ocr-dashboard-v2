@@ -33,3 +33,11 @@ Thumbs.db
 # Cache
 .cache/
 *.pyc
+
+# Antigravity workspace
+artifacts/
+.antigravity/memory.json
+.context/.cache/
+
+# Snyk Security Extension - AI Rules (auto-generated)
+.agent/rules/snyk_rules.md

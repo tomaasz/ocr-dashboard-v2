@@ -1,0 +1,141 @@
+Metadata-Version: 2.4
+Name: ocr-dashboard-v2
+Version: 0.0.0
+Summary: OCR pipeline for old documents (job-based)
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+
+# OCR stare dokumenty — Annotator + Pipeline
+
+Projekt systemu OCR do przetwarzania **starych dokumentów** (metryki, akta, indeksy),
+z naciskiem na **kontrolę kontekstu AI**, **audytowalność danych** i **twardy podział odpowiedzialności**.
+
+Repozytorium jest zaprojektowane tak, aby:
+- chronić projekt przed dryfem wymagań,
+- umożliwiać równoległy rozwój UI i pipeline,
+- być odporne na halucynacje i regresje AI.
+
+---
+
+## Główna idea
+
+System składa się z trzech warstw:
+
+1. **Annotator UI (Streamlit)**  
+   Ręczna anotacja, weryfikacja i korekta merytoryczna przez człowieka.
+
+2. **Backend / Pipeline OCR (Playwright + Gemini)**  
+   Automatyzacja OCR, ekstrakcja danych, retry, watchdog, rotacja kontekstu.
+
+3. **Warstwa danych (PostgreSQL)**  
+   Centralny autorytet stanu technicznego i kolejkowania zadań.
+
+Jedynym kontraktem danych pomiędzy warstwami jest plik `job.json`.
+
+---
+
+## Struktura repozytorium
+
+```
+
+ocr-dashboard-v2/
+├── docs/                # KANON projektu – źródło prawdy
+│   ├── ARCHITECTURE.md
+│   ├── CONTRACT_JOB_JSON.md
+│   ├── DECISIONS.md
+│   ├── FAILURES.md
+│   ├── REQUIREMENTS.md
+│   ├── STATE.md
+│   └── NOTEBOOKLM_DUMP.md
+│
+├── src/                 # Kod (UI, pipeline, silniki OCR)
+├── tests/               # Testy kontraktowe i techniczne
+├── prompts/             # Globalne prompty OCR / JSON
+├── data/                # Dane robocze (lokalne, niekanoniczne)
+├── logs/                # Logi runtime (nietrwałe)
+│   └── .keep
+│
+├── .gitignore
+├── requirements.txt
+└── README.md
+
+```
+
+---
+
+## Dokumentacja (`docs/`) — jak czytać
+
+### 🔒 KANON (nietykalne bez decyzji)
+- **ARCHITECTURE.md**  
+  Architektura systemu i granice UI vs backend. Najważniejszy dokument.
+- **CONTRACT_JOB_JSON.md**  
+  Jedyny kontrakt danych (`job.json`). Single Source of Truth.
+- **DECISIONS.md**  
+  Dlaczego system jest taki, jaki jest. Każda decyzja architektoniczna.
+- **FAILURES.md**  
+  Pamięć błędów i antywzorców. Co już raz zepsuło system.
+
+### 🔄 Operacyjne
+- **STATE.md**  
+  Aktualny stan projektu i najbliższe kroki.
+- **REQUIREMENTS.md**  
+  Wymagania MVP i zakres funkcjonalny.
+
+### 🗄 Archiwum
+- **NOTEBOOKLM_DUMP.md**  
+  Surowy dump historii eksperymentów i rozmów.  
+  Read-only. Nie jest źródłem prawdy.
+
+---
+
+## Zasady nadrzędne (MUST READ)
+
+- UI **nie wykonuje OCR** i nie zarządza automatyzacją.
+- Pipeline **nie nadpisuje danych wprowadzonych przez człowieka**.
+- `job.json` jest **jedynym kontraktem danych**.
+- Brak `sleep()` jako sygnału sukcesu — tylko twarde sygnały DOM.
+- Każda zmiana architektury → wpis w `DECISIONS.md`.
+
+---
+
+## Status projektu
+
+Aktualny status i roadmapa znajdują się w:
+```
+
+docs/STATE.md
+
+```
+
+Na moment obecny:
+- dokumentacja (KANON) jest zamknięta,
+- repo jest gotowe do rozpoczęcia implementacji MVP,
+- pierwszym krokiem jest **minimalny Annotator UI + zapis `job.json`**.
+
+---
+
+## Jak zacząć pracę
+
+1. Przeczytaj **ARCHITECTURE.md**
+2. Przeczytaj **CONTRACT_JOB_JSON.md**
+3. Zapoznaj się z **FAILURES.md**
+4. Sprawdź aktualny stan w **STATE.md**
+5. Dopiero potem pisz kod
+
+---
+
+## Uwaga dla AI / agentów
+
+> Jeśli jesteś agentem AI:
+> - nie zgaduj wymagań,
+> - nie upraszczaj architektury,
+> - nie usuwaj testów ani plików konfiguracyjnych,
+> - opieraj się wyłącznie na dokumentach w `docs/`.
+
+---
+
+## Licencja / status
+
+Projekt w fazie rozwojowej (R&D).  
+Licencja i model dystrybucji zostaną określone na późniejszym etapie.
+```

@@ -53,12 +53,6 @@
         margin-top: 0;
         border-top: none;
       }
-
-
-      @keyframes slideIn {
-        from { transform: translateX(100%); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
-      }
     </style>
     <script>
       // XSS Protection Helper
@@ -242,7 +236,6 @@
                 >Post-Process</span
               >
             </a>
-
             <a
               class="nav-item"
               data-tab="jobconfig"
@@ -257,11 +250,13 @@
                   stroke="currentColor"
                   stroke-width="2"
                 >
-                  <polygon points="5 3 19 12 5 21 5 3" />
+                  <polygon points="12 2 2 7 12 12 22 7 12 2" />
+                  <polyline points="2 17 12 22 22 17" />
+                  <polyline points="2 12 12 17 22 12" />
                 </svg>
               </span>
               <span class="nav-item-text" data-i18n="nav.jobconfig"
-                >Start Job</span
+                >Konfiguracja Job</span
               >
             </a>
             <a
@@ -414,11 +409,10 @@
         <!-- Stats removed from header -->
 
         <div class="header-actions">
-
           <button
-            class="btn btn-primary btn-sm"
-            onclick="switchTab('jobconfig')"
-            title="Konfiguracja i Start"
+            onclick="openStartJobModal()"
+            class="btn btn-success btn-sm"
+            data-i18n-title="startJob.title"
           >
             <svg
               width="16"
@@ -430,7 +424,7 @@
             >
               <polygon points="5 3 19 12 5 21 5 3" />
             </svg>
-            Start Job
+            <span data-i18n="header.startJob">Start Job</span>
           </button>
           <button
             class="btn btn-danger btn-sm"
@@ -921,14 +915,8 @@
             </div>
 
             <div
-              style="margin-left: auto; display: flex; gap: var(--spacing-sm); align-items: center;"
+              style="margin-left: auto; display: flex; gap: var(--spacing-sm)"
             >
-              <!-- Manual Headed Mode Toggle -->
-              <label class="checkbox-label" title="Uruchom w trybie z oknem przeglądarki" style="margin-bottom: 0;">
-                  <input type="checkbox" id="manualHeadedMode">
-                  <span style="font-size: 13px;">Headed</span>
-              </label>
-
               <!-- View Toggle -->
               <div class="view-toggle">
                 <button
@@ -1342,14 +1330,7 @@
                 <option value="warn">WARN</option>
                 <option value="error">ERROR</option>
               </select>
-              <button class="btn btn-secondary btn-sm" onclick="copyFromElement('logContainer', this)" title="Kopiuj logi">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                </svg>
-                Kopiuj
-              </button>
-              <button class="btn btn-secondary btn-sm" onclick="clearLogs()" title="Wyczyść logi">
+              <button class="btn btn-secondary btn-sm" onclick="clearLogs()">
                 <svg
                   width="16"
                   height="16"
@@ -1833,12 +1814,7 @@
             <!-- Post-Process Logs -->
             <div class="card">
               <div class="card-header">
-                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                    <h3 class="card-title">Log</h3>
-                    <button class="btn btn-ghost btn-sm" onclick="copyFromElement('postProcLogContainer', this)" title="Kopiuj logi">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                    </button>
-                </div>
+                <h3 class="card-title">Log</h3>
               </div>
               <div class="card-body">
                 <div
@@ -1859,81 +1835,395 @@
 
         <!-- Job Config Tab -->
         <div class="tab-panel" id="tab-jobconfig">
-            <div class="page-header">
-                <div>
-                    <h1 class="page-title" data-i18n="job.title">Konfiguracja Job</h1>
-                    <p class="page-subtitle" data-i18n="job.subtitle">Ustawienia nowego zadania OCR</p>
-                </div>
-                <div class="header-actions">
-                    <button class="btn btn-secondary" onclick="resetJobConfig()" title="Przywróć domyślne ustawienia" style="margin-right: 8px;">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-                            <path d="M3 3v5h5"/>
-                        </svg>
-                        <span data-i18n="job.resetBtn">Reset</span>
-                    </button>
-                    <button class="btn btn-success" onclick="startJob()">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polygon points="5 3 19 12 5 21 5 3" />
-                        </svg>
-                        <span data-i18n="job.startBtn">Uruchom Job</span>
-                    </button>
-                </div>
+          <div class="page-header">
+            <div>
+              <h1 class="page-title">Konfiguracja Job OCR</h1>
+              <p class="page-subtitle">Parametry uruchomienia zadań OCR</p>
             </div>
-            
-            <div class="config-container">
+          </div>
+
+          <!-- Job Config Tabs -->
+        </div>
+
+        <!-- Settings Tab -->
+        <div class="tab-panel" id="tab-settings">
+          <div class="page-header">
+            <div>
+              <h1 class="page-title">Ustawienia</h1>
+              <p class="page-subtitle">Konfiguracja i zarządzanie farmą</p>
+            </div>
+          </div>
+
+          <div
+            style="
+              display: grid;
+              grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+              gap: var(--spacing-lg);
+            "
+          >
+            <!-- Auto-Restart -->
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">Auto-Restart</h3>
+              </div>
+              <div class="card-body">
+                <label
+                  class="checkbox-label"
+                  style="margin-bottom: var(--spacing-md)"
+                >
+                  <input
+                    type="checkbox"
+                    id="autoRestartEnabled"
+                    onchange="toggleAutoRestart()"
+                  />
+                  Włącz automatyczny restart po zatrzymaniu
+                </label>
+                <p class="text-secondary" style="font-size: 12px">
+                  Gdy włączone, farma automatycznie wznowi pracę po zatrzymaniu
+                  z powodu błędu lub limitu.
+                </p>
+              </div>
+            </div>
+
+            <!-- Cleanup -->
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">Czyszczenie</h3>
+              </div>
+              <div class="card-body">
+                <div class="form-group">
+                  <label class="checkbox-label"
+                    ><input type="checkbox" id="cleanupJobs" checked />
+                    Jobs</label
+                  >
+                </div>
+                <div class="form-group">
+                  <label class="checkbox-label"
+                    ><input type="checkbox" id="cleanupLogs" checked />
+                    Logs</label
+                  >
+                </div>
+                <div class="form-group">
+                  <label class="checkbox-label"
+                    ><input type="checkbox" id="cleanupArtifacts" />
+                    Artifacts</label
+                  >
+                </div>
+                <div class="form-group">
+                  <label class="checkbox-label"
+                    ><input type="checkbox" id="cleanupTestResults" /> Test
+                    Results</label
+                  >
+                </div>
+                <div class="form-group">
+                  <label class="checkbox-label"
+                    ><input type="checkbox" id="cleanupPycache" />
+                    __pycache__</label
+                  >
+                </div>
+                <button
+                  class="btn btn-danger"
+                  id="cleanupExecuteBtn"
+                  onclick="runCleanup('')"
+                  style="margin-top: var(--spacing-sm)"
+                >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <polyline points="3 6 5 6 21 6" />
+                    <path
+                      d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                    />
+                  </svg>
+                  Wyczyść wybrane foldery
+                </button>
+                <p
+                  class="text-secondary"
+                  style="font-size: 12px; margin-top: var(--spacing-sm)"
+                  id="cleanupStatus"
+                ></p>
+              </div>
+            </div>
+
+            <!-- Sync Profiles -->
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">Synchronizacja profili</h3>
+              </div>
+              <div class="card-body">
+                <p
+                  class="text-secondary"
+                  style="font-size: 13px; margin-bottom: var(--spacing-md)"
+                >
+                  Synchronizuj profile między maszynami lub utwórz nowy profil.
+                </p>
+                <div class="form-group">
+                  <label class="form-label">Nowy profil</label>
+                  <div class="flex gap-sm">
+                    <input
+                      type="text"
+                      class="form-input"
+                      id="newProfileName"
+                      placeholder="nazwa_profilu"
+                    />
+                    <button class="btn btn-primary" onclick="createProfile()">
+                      Dodaj
+                    </button>
+                  </div>
+                </div>
+                <button
+                  class="btn btn-secondary"
+                  onclick="syncProfiles()"
+                  style="width: 100%"
+                >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <polyline points="23 4 23 10 17 10" />
+                    <polyline points="1 20 1 14 7 14" />
+                    <path
+                      d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"
+                    />
+                  </svg>
+                  Sync Profiles
+                </button>
+              </div>
+            </div>
+
+            <!-- System -->
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">System</h3>
+              </div>
+              <div class="card-body">
+                <button
+                  class="btn btn-danger"
+                  onclick="restartAppConfirm()"
+                  style="width: 100%"
+                >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path d="M21 2v6h-6" />
+                    <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+                    <path d="M3 22v-6h6" />
+                    <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+                  </svg>
+                  Restart Aplikacji
+                </button>
+                <p
+                  class="text-secondary"
+                  style="font-size: 12px; margin-top: var(--spacing-sm)"
+                >
+                  Zrestartuje dashboard i limit worker.
+                </p>
+              </div>
+            </div>
+
+            <!-- X11 Display -->
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">X11 Display (Logowanie)</h3>
+              </div>
+              <div class="card-body">
+                <div class="form-group">
+                  <label class="form-label">DISPLAY dla okna logowania</label>
+                  <div class="flex gap-sm">
+                    <input
+                      type="text"
+                      class="form-input"
+                      id="x11Display"
+                      placeholder="np. 192.168.1.100:0 lub :0"
+                    />
+                    <button class="btn btn-primary" onclick="saveX11Display()">
+                      Zapisz
+                    </button>
+                  </div>
+                </div>
+                <p
+                  class="text-secondary"
+                  style="font-size: 12px; margin-top: var(--spacing-sm)"
+                >
+                  Adres X serwera (VcXsrv/Xming) dla otwierania okna
+                  przeglądarki. Format: IP:0 lub :0 dla lokalnego.
+                </p>
+                <p
+                  class="text-secondary"
+                  style="font-size: 12px"
+                  id="x11DisplayStatus"
+                ></p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Session Expired Banner -->
+    <div class="session-banner hidden" id="sessionExpiredBanner">
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <path
+          d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+        />
+        <line x1="12" y1="9" x2="12" y2="13" />
+        <line x1="12" y1="17" x2="12.01" y2="17" />
+      </svg>
+      <span
+        >Sesja wygasła dla profili: <strong id="expiredProfilesList"></strong
+      ></span>
+      <button class="btn btn-sm btn-ghost" onclick="hideSessionBanner()">
+        ×
+      </button>
+    </div>
+
+    <!-- Bulk Actions Bar -->
+    <div class="bulk-actions-bar" id="bulkActionsBar">
+      <span class="bulk-count"
+        >Zaznaczono: <strong id="selectedCount">0</strong></span
+      >
+      <button class="btn btn-success btn-sm" onclick="startSelected()">
+        Start zaznaczonych
+      </button>
+      <button class="btn btn-danger btn-sm" onclick="stopSelected()">
+        Stop zaznaczonych
+      </button>
+      <button class="btn btn-ghost btn-sm" onclick="clearSelection()">
+        Odznacz
+      </button>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Profile Details Modal -->
+    <div class="modal-overlay" id="profileModal">
+      <div class="modal">
+        <div class="modal-header">
+          <h3 class="modal-title" id="modalProfileName">Szczegóły profilu</h3>
+          <button class="btn btn-ghost btn-icon" onclick="closeModal()">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body" id="modalContent">
+          <!-- Profile details will be loaded here -->
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closeModal()">
+            Zamknij
+          </button>
+        </div>
+      </div>
+    </div>
+
+
+
+    <div class="modal-overlay" id="startJobModal">
+        <div class="modal" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3 class="modal-title">Uruchom Job OCR</h3>
+                <button class="btn btn-ghost btn-icon" onclick="closeStartJobModal()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
                 <!-- Job Config Tabs -->
                 <div class="config-tabs">
-                    <button class="config-tab active" data-config-tab="basic" onclick="switchConfigTab('basic')" data-i18n="job.tabs.basic">Basic</button>
-                    <button class="config-tab" data-config-tab="performance" onclick="switchConfigTab('performance')" data-i18n="job.tabs.performance">Performance</button>
-                    <button class="config-tab" data-config-tab="database" onclick="switchConfigTab('database')" data-i18n="job.tabs.database">Database</button>
-                    <button class="config-tab" data-config-tab="preprocess" onclick="switchConfigTab('preprocess')" data-i18n="job.tabs.preprocess">Preprocess</button>
-                    <button class="config-tab" data-config-tab="advanced" onclick="switchConfigTab('advanced')" data-i18n="job.tabs.advanced">Advanced</button>
+                    <button class="config-tab active" data-config-tab="basic"
+                        onclick="switchConfigTab('basic')">Basic</button>
+                    <button class="config-tab" data-config-tab="performance"
+                        onclick="switchConfigTab('performance')">Performance</button>
+                    <button class="config-tab" data-config-tab="database"
+                        onclick="switchConfigTab('database')">Database</button>
+                    <button class="config-tab" data-config-tab="preprocess"
+                        onclick="switchConfigTab('preprocess')">Preprocess</button>
+                    <button class="config-tab" data-config-tab="advanced"
+                        onclick="switchConfigTab('advanced')">Advanced</button>
                 </div>
 
                 <!-- Basic Tab -->
                 <div class="config-panel active" id="config-basic">
                     <div class="form-group">
-                        <label class="form-label" data-i18n="job.basic.sourcePath" data-i18n-title="job.tooltips.sourcePath">Source Path</label>
+                        <label class="form-label">Source Path</label>
                         <div class="flex gap-sm">
                             <input type="text" class="form-input" id="jobSourcePath" placeholder="/path/to/images">
                             <button class="btn btn-secondary" onclick="openFileBrowser()">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path
+                                        d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
                                 </svg>
                             </button>
                         </div>
                     </div>
                     <div class="form-group">
-                        <label class="form-label" data-i18n="job.basic.batchId" data-i18n-title="job.tooltips.batchId">Batch ID</label>
+                        <label class="form-label">Batch ID</label>
                         <input type="text" class="form-input" id="jobBatchId" placeholder="auto-generated if empty">
                     </div>
                     <div class="form-group">
-                        <label class="checkbox-label" data-i18n-title="job.tooltips.headed">
+                        <label class="checkbox-label">
                             <input type="checkbox" id="jobHeadedMode">
-                            <span data-i18n="job.basic.headed">Headed Mode (pokazuj przeglądarkę)</span>
+                            Headed Mode (pokazuj przeglądarkę)
                         </label>
                     </div>
                     <div class="form-group">
-                        <label class="form-label" data-i18n="job.basic.engine" data-i18n-title="job.tooltips.engine">Silnik OCR</label>
+                        <label class="form-label">Silnik OCR</label>
                         <select class="form-select" id="jobEngine">
                             <option value="auto">Auto (domyślnie)</option>
                             <option value="gemini">Gemini</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label class="form-label" data-i18n="job.basic.profiles">Profile do uruchomienia</label>
+                        <label class="form-label">Profile do uruchomienia</label>
                         <div class="flex gap-sm flex-wrap" style="margin-bottom: var(--spacing-sm);">
-                            <button class="btn btn-secondary btn-sm" onclick="selectAllJobProfiles()" data-i18n="job.basic.all">Wszystkie</button>
-                            <button class="btn btn-secondary btn-sm" onclick="selectOkLimitJobProfiles()" data-i18n="job.basic.okLimit">OK Limit</button>
-                            <button class="btn btn-secondary btn-sm" onclick="clearJobProfiles()" data-i18n="job.basic.clear">Wyczyść</button>
-                            <span style="border-left: 1px solid var(--color-border); margin: 0 var(--spacing-xs);"></span>
+                            <button class="btn btn-secondary btn-sm" onclick="selectAllJobProfiles()">Wszystkie</button>
+                            <button class="btn btn-secondary btn-sm" onclick="selectOkLimitJobProfiles()">OK
+                                Limit</button>
+                            <button class="btn btn-secondary btn-sm" onclick="clearJobProfiles()">Wyczyść</button>
+                            <span
+                                style="border-left: 1px solid var(--color-border); margin: 0 var(--spacing-xs);"></span>
                             <button class="btn btn-secondary btn-sm" onclick="sortJobProfiles('asc')">A→Z</button>
                             <button class="btn btn-secondary btn-sm" onclick="sortJobProfiles('desc')">Z→A</button>
-                            <span style="border-left: 1px solid var(--color-border); margin: 0 var(--spacing-xs);"></span>
-                            <button class="btn btn-primary btn-sm" onclick="openAddProfileModal()" data-i18n="job.basic.add">+ Dodaj</button>
+                            <span
+                                style="border-left: 1px solid var(--color-border); margin: 0 var(--spacing-xs);"></span>
+                            <button class="btn btn-primary btn-sm" onclick="openAddProfileModal()">+ Dodaj</button>
                         </div>
-                        <div class="job-profiles-list" id="jobProfilesList" style="max-height: 150px; overflow-y: auto; border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--spacing-sm);">
+                        <div class="job-profiles-list" id="jobProfilesList"
+                            style="max-height: 150px; overflow-y: auto; border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--spacing-sm);">
                             {% for profile in profiles %}
                             <label class="checkbox-label" style="margin-bottom: 4px;">
                                 <input type="checkbox" class="job-profile-cb" value="{{ profile.name }}" checked>
@@ -1948,62 +2238,63 @@
                 <div class="config-panel" id="config-performance">
                     <div class="form-row">
                         <div class="form-group">
-                            <label class="form-label" data-i18n="job.perf.workers" data-i18n-title="job.tooltips.workers">Workers</label>
+                            <label class="form-label">Workers</label>
                             <input type="number" class="form-input" id="jobWorkers" value="2" min="1" max="10">
                         </div>
                         <div class="form-group">
-                            <label class="form-label" data-i18n="job.perf.scans" data-i18n-title="job.tooltips.scans">Scans per Worker</label>
+                            <label class="form-label">Scans per Worker</label>
                             <input type="number" class="form-input" id="jobScansPerWorker" value="2" min="1" max="100">
                         </div>
                     </div>
                     <div class="form-group">
-                        <label class="form-label" data-i18n="job.perf.timeout" data-i18n-title="job.tooltips.timeout">Collect Timeout (sec)</label>
+                        <label class="form-label">Collect Timeout (sec)</label>
                         <input type="number" class="form-input" id="jobCollectTimeout" value="400" min="60" max="1200">
                     </div>
                     <hr style="border-color: var(--color-border); margin: var(--spacing-md) 0;">
-                    <p class="text-secondary" style="font-size: 11px; margin-bottom: var(--spacing-sm);" data-i18n="job.perf.tabsSection">Karty przeglądarki</p>
+                    <p class="text-secondary" style="font-size: 11px; margin-bottom: var(--spacing-sm);">Karty
+                        przeglądarki</p>
                     <div class="form-row">
                         <div class="form-group">
-                            <label class="checkbox-label" data-i18n-title="job.tooltips.closeIdle">
+                            <label class="checkbox-label">
                                 <input type="checkbox" id="jobCloseIdleTabs" checked>
-                                <span data-i18n="job.perf.closeIdle">Auto zamykaj nieużywane karty</span>
+                                Auto zamykaj nieużywane karty
                             </label>
                         </div>
                         <div class="form-group">
-                            <label class="form-label" data-i18n="job.perf.maxTabs" data-i18n-title="job.tooltips.maxTabs">Max kart / kontekst (0=bez)</label>
+                            <label class="form-label">Max kart / kontekst (0=bez)</label>
                             <input type="number" class="form-input" id="jobMaxTabsPerContext" value="0" min="0">
                         </div>
                     </div>
                     <hr style="border-color: var(--color-border); margin: var(--spacing-md) 0;">
-                    <p class="text-secondary" style="font-size: 11px; margin-bottom: var(--spacing-sm);" data-i18n="job.perf.ctxSection">Konteksty</p>
+                    <p class="text-secondary" style="font-size: 11px; margin-bottom: var(--spacing-sm);">Konteksty</p>
                     <div class="form-row">
                         <div class="form-group">
-                            <label class="checkbox-label" data-i18n-title="job.tooltips.isolated">
+                            <label class="checkbox-label">
                                 <input type="checkbox" id="jobIsolatedContexts">
-                                <span data-i18n="job.perf.isolated">Izolowane konteksty</span>
+                                Izolowane konteksty (więcej stabilności)
                             </label>
                         </div>
                         <div class="form-group">
-                            <label class="form-label" data-i18n="job.perf.pool" data-i18n-title="job.tooltips.pool">Pula kontekstów</label>
+                            <label class="form-label">Pula kontekstów (0=1/worker)</label>
                             <input type="number" class="form-input" id="jobContextPoolSize" value="0" min="0">
                         </div>
                     </div>
                     <hr style="border-color: var(--color-border); margin: var(--spacing-md) 0;">
-                    <p class="text-secondary" style="font-size: 11px; margin-bottom: var(--spacing-sm);" data-i18n="job.perf.uiSection">Profil UI</p>
+                    <p class="text-secondary" style="font-size: 11px; margin-bottom: var(--spacing-sm);">Profil UI</p>
                     <div class="form-row">
                         <div class="form-group">
-                            <label class="form-label" data-i18n="job.perf.viewportW">Viewport Width</label>
+                            <label class="form-label">Viewport Width</label>
                             <input type="number" class="form-input" id="jobViewportWidth" value="1200">
                         </div>
                         <div class="form-group">
-                            <label class="form-label" data-i18n="job.perf.viewportH">Viewport Height</label>
+                            <label class="form-label">Viewport Height</label>
                             <input type="number" class="form-input" id="jobViewportHeight" value="800">
                         </div>
                     </div>
                     <div class="form-group">
-                        <label class="checkbox-label" data-i18n-title="job.tooltips.reducedMotion">
+                        <label class="checkbox-label">
                             <input type="checkbox" id="jobReducedMotion" checked>
-                            <span data-i18n="job.perf.reducedMotion">Ogranicz animacje</span>
+                            Ogranicz animacje (reduced motion)
                         </label>
                     </div>
                 </div>
@@ -2011,182 +2302,350 @@
                 <!-- Database Tab -->
                 <div class="config-panel" id="config-database">
                     <div class="form-group">
-                        <label class="checkbox-label" data-i18n-title="job.tooltips.pgEnabled">
+                        <label class="checkbox-label">
                             <input type="checkbox" id="jobPgEnabled" checked>
-                            <span data-i18n="job.db.enabled">PostgreSQL Enabled</span>
+                            PostgreSQL Enabled
                         </label>
                     </div>
                     <div class="form-group">
-                        <label class="form-label" data-i18n="job.db.dsn">PostgreSQL DSN</label>
-                        <input type="text" class="form-input" id="jobPgDsn" value="postgresql://tomaasz:123Karinka!%40%23@127.0.0.1:5432/ocr" placeholder="postgresql://user:pass@host:5432/db">
+                        <label class="form-label">PostgreSQL DSN</label>
+                        <input type="text" class="form-input" id="jobPgDsn"
+                            value="postgresql://tomaasz:123Karinka!%40%23@127.0.0.1:5432/ocr"
+                            placeholder="postgresql://user:pass@host:5432/db">
                     </div>
                     <div class="form-group">
-                        <label class="form-label" data-i18n="job.db.table">Table</label>
+                        <label class="form-label">Table</label>
                         <input type="text" class="form-input" id="jobPgTable" value="public.ocr_raw_texts">
                     </div>
                     <hr style="border-color: var(--color-border); margin: var(--spacing-md) 0;">
-                    <p class="text-secondary" style="font-size: 11px; margin-bottom: var(--spacing-sm); text-transform: uppercase;" data-i18n="job.db.syncSection">Synchronizacja</p>
+                    <p class="text-secondary"
+                        style="font-size: 11px; margin-bottom: var(--spacing-sm); text-transform: uppercase;">
+                        Synchronizacja</p>
                     <button class="btn btn-primary" onclick="syncProfiles()" style="width: 100%;">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
                             <path d="M21 2v6h-6" />
                             <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
                             <path d="M3 22v-6h6" />
                             <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
                         </svg>
-                        <span data-i18n="job.db.syncBtn">Synchronizuj profile (Remote)</span>
+                        Synchronizuj profile (Remote)
                     </button>
-                    <p class="text-secondary" style="font-size: 11px; margin-top: var(--spacing-xs); text-align: center;" data-i18n="job.db.syncDesc">Kopiuje lokalne profile (Gemini) na zdalnego workera</p>
+                    <p class="text-secondary"
+                        style="font-size: 11px; margin-top: var(--spacing-xs); text-align: center;">
+                        Kopiuje lokalne profile (Gemini) na zdalnego workera
+                    </p>
                 </div>
 
                 <!-- Preprocess Tab -->
                 <div class="config-panel" id="config-preprocess">
-                    <p class="text-secondary" style="margin-bottom: var(--spacing-md); font-size: 12px;" data-i18n="job.prep.desc">
+                    <p class="text-secondary" style="margin-bottom: var(--spacing-md); font-size: 12px;">
                         Parametry przetwarzania obrazu. Domyślne wartości są optymalne dla większości dokumentów.
                     </p>
 
-                    <p class="text-secondary" style="font-size: 11px; margin-bottom: var(--spacing-xs); text-transform: uppercase;" data-i18n="job.prep.scaleSection">Skalowanie i szum</p>
+                    <!-- Skalowanie i szum -->
+                    <p class="text-secondary"
+                        style="font-size: 11px; margin-bottom: var(--spacing-xs); text-transform: uppercase;">Skalowanie
+                        i szum</p>
                     <div class="form-row">
                         <div class="form-group">
-                            <label class="form-label" data-i18n="job.prep.maxDim" data-i18n-title="job.tooltips.maxDim">Max Dimension</label>
+                            <label class="form-label">Max Dimension</label>
                             <input type="number" class="form-input" id="jobPreprocMaxDim" value="2500">
                         </div>
                         <div class="form-group">
-                            <label class="form-label" data-i18n="job.prep.median" data-i18n-title="job.tooltips.median">Median Kernel</label>
+                            <label class="form-label">Median Kernel</label>
                             <input type="number" class="form-input" id="jobPreprocMedianKernel" value="3">
                         </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label class="form-label" data-i18n="job.prep.denoise" data-i18n-title="job.tooltips.denoise">Denoise Strength</label>
+                            <label class="form-label">Denoise Strength</label>
                             <input type="number" class="form-input" id="jobPreprocDenoise" value="8">
                         </div>
                         <div class="form-group">
-                            <label class="form-label" data-i18n="job.prep.morph" data-i18n-title="job.tooltips.morph">Morph Kernel</label>
+                            <label class="form-label">Morph Kernel</label>
                             <input type="number" class="form-input" id="jobPreprocMorph" value="2">
                         </div>
                     </div>
 
                     <hr style="border-color: var(--color-border); margin: var(--spacing-md) 0;">
-                    <p class="text-secondary" style="font-size: 11px; margin-bottom: var(--spacing-xs); text-transform: uppercase;" data-i18n="job.prep.contrastSection">Kontrast i kontury</p>
+                    <p class="text-secondary"
+                        style="font-size: 11px; margin-bottom: var(--spacing-xs); text-transform: uppercase;">Kontrast i
+                        kontury</p>
                     <div class="form-row">
                         <div class="form-group">
-                            <label class="form-label" data-i18n="job.prep.claheClip">CLAHE Clip Limit</label>
+                            <label class="form-label">CLAHE Clip Limit</label>
                             <input type="number" class="form-input" id="jobPreprocClahe" value="2.0" step="0.1">
                         </div>
                         <div class="form-group">
-                            <label class="form-label" data-i18n="job.prep.claheGrid">CLAHE Grid Size</label>
-                            <input type="text" class="form-input" id="jobPreprocClaheGrid" value="8,8" placeholder="8,8">
+                            <label class="form-label">CLAHE Grid Size</label>
+                            <input type="text" class="form-input" id="jobPreprocClaheGrid" value="8,8"
+                                placeholder="8,8">
                         </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label class="form-label" data-i18n="job.prep.localSigma">Local Contrast Sigma</label>
+                            <label class="form-label">Local Contrast Sigma</label>
                             <input type="number" class="form-input" id="jobPreprocLocalSigma" value="12.0" step="0.1">
                         </div>
                         <div class="form-group">
-                            <label class="form-label" data-i18n="job.prep.localAmount">Local Contrast Amount</label>
+                            <label class="form-label">Local Contrast Amount</label>
                             <input type="number" class="form-input" id="jobPreprocLocalAmount" value="0.35" step="0.05">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Blackhat Kernel</label>
+                            <input type="number" class="form-input" id="jobPreprocBlackhatKernel" value="5">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Blackhat Strength</label>
+                            <input type="number" class="form-input" id="jobPreprocBlackhatStrength" value="0.45"
+                                step="0.05">
+                        </div>
+                    </div>
+
+                    <hr style="border-color: var(--color-border); margin: var(--spacing-md) 0;">
+                    <p class="text-secondary"
+                        style="font-size: 11px; margin-bottom: var(--spacing-xs); text-transform: uppercase;">
+                        Wyostrzenie</p>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Unsharp Amount</label>
+                            <input type="number" class="form-input" id="jobPreprocUnsharpAmount" value="1.2" step="0.1">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Unsharp Radius</label>
+                            <input type="number" class="form-input" id="jobPreprocUnsharpRadius" value="1">
+                        </div>
+                    </div>
+
+                    <hr style="border-color: var(--color-border); margin: var(--spacing-md) 0;">
+                    <p class="text-secondary"
+                        style="font-size: 11px; margin-bottom: var(--spacing-xs); text-transform: uppercase;">Marginesy
+                        i tło</p>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Margin Percent</label>
+                            <input type="number" class="form-input" id="jobPreprocMarginPercent" value="0.05"
+                                step="0.01">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Dark Threshold</label>
+                            <input type="number" class="form-input" id="jobPreprocDarkThreshold" value="60">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Margin Ink Ratio Max</label>
+                            <input type="number" class="form-input" id="jobPreprocMarginInkRatio" value="0.01"
+                                step="0.001">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Margin Shadow Mean Max</label>
+                            <input type="number" class="form-input" id="jobPreprocMarginShadow" value="200">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Background Kernel Ratio</label>
+                            <input type="number" class="form-input" id="jobPreprocBgKernelRatio" value="0.025"
+                                step="0.001">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Background Kernel Min</label>
+                            <input type="number" class="form-input" id="jobPreprocBgKernelMin" value="31">
+                        </div>
+                    </div>
+
+                    <hr style="border-color: var(--color-border); margin: var(--spacing-md) 0;">
+                    <p class="text-secondary"
+                        style="font-size: 11px; margin-bottom: var(--spacing-xs); text-transform: uppercase;">
+                        Binaryzacja (Sauvola)</p>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="jobPreprocBinarization">
+                            Włącz binaryzację adaptacyjną (Sauvola)
+                        </label>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Sauvola Window</label>
+                            <input type="number" class="form-input" id="jobPreprocSauvolaW" value="31">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Sauvola K</label>
+                            <input type="number" class="form-input" id="jobPreprocSauvolaK" value="0.2" step="0.05">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Sauvola R</label>
+                        <input type="number" class="form-input" id="jobPreprocSauvolaR" value="128.0" step="0.5">
+                    </div>
+
+                    <hr style="border-color: var(--color-border); margin: var(--spacing-md) 0;">
+                    <p class="text-secondary"
+                        style="font-size: 11px; margin-bottom: var(--spacing-xs); text-transform: uppercase;">Maska
+                        tekstu</p>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Block Size</label>
+                            <input type="number" class="form-input" id="jobPreprocTextMaskBlock" value="31">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">C</label>
+                            <input type="number" class="form-input" id="jobPreprocTextMaskC" value="12">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Open Kernel</label>
+                            <input type="number" class="form-input" id="jobPreprocTextMaskOpenK" value="3">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Close Kernel</label>
+                            <input type="number" class="form-input" id="jobPreprocTextMaskCloseK" value="9">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Close Iters</label>
+                            <input type="number" class="form-input" id="jobPreprocTextMaskCloseI" value="2">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Dilate Iters</label>
+                            <input type="number" class="form-input" id="jobPreprocTextMaskDilateI" value="1">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Min Area Ratio</label>
+                        <input type="number" class="form-input" id="jobPreprocTextMaskMinArea" value="0.0005"
+                            step="0.0001">
+                    </div>
+
+                    <hr style="border-color: var(--color-border); margin: var(--spacing-md) 0;">
+                    <p class="text-secondary"
+                        style="font-size: 11px; margin-bottom: var(--spacing-xs); text-transform: uppercase;">Trim
+                        brzegów</p>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Trim Band Ratio</label>
+                            <input type="number" class="form-input" id="jobPreprocTrimBand" value="0.02" step="0.01">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Trim Ink Ratio Max</label>
+                            <input type="number" class="form-input" id="jobPreprocTrimInk" value="0.02" step="0.01">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Trim Max Ratio</label>
+                            <input type="number" class="form-input" id="jobPreprocTrimMax" value="0.15" step="0.01">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Trim Min Dimension</label>
+                            <input type="number" class="form-input" id="jobPreprocTrimMinDim" value="200">
                         </div>
                     </div>
                 </div>
 
                 <!-- Advanced Tab -->
                 <div class="config-panel" id="config-advanced">
-                    <p class="text-secondary" style="font-size: 11px; margin-bottom: var(--spacing-sm); text-transform: uppercase;" data-i18n="job.adv.mode">Tryb pracy</p>
+                    <p class="text-secondary" style="font-size: 11px; margin-bottom: var(--spacing-sm);">Tryb pracy</p>
                     <div class="form-group">
-                        <label class="checkbox-label" data-i18n-title="job.tooltips.continue">
-                            <input type="checkbox" id="jobContinueMode" checked>
-                            <span data-i18n="job.adv.continue">Tryb kontynuacji (Continue)</span>
-                        </label>
+                        <label class="checkbox-label"><input type="checkbox" id="jobContinueMode" checked> Continue Mode
+                            (wznów od miejsca przerwania)</label>
                     </div>
                     <div class="form-group">
-                        <label class="checkbox-label" data-i18n-title="job.tooltips.proOnly">
-                            <input type="checkbox" id="jobProOnly" checked>
-                            <span data-i18n="job.adv.proOnly">Tylko model Pro (gwarantowana jakość)</span>
-                        </label>
+                        <label class="checkbox-label"><input type="checkbox" id="jobProOnly" checked> Pro Only (tylko
+                            model Pro)</label>
                     </div>
                     <div class="form-group">
-                         <label class="checkbox-label" data-i18n-title="job.tooltips.clean">
-                            <input type="checkbox" id="jobCleanTmp" checked>
-                            <span data-i18n="job.adv.clean">Czyść pliki tymczasowe</span>
-                         </label>
+                        <label class="checkbox-label"><input type="checkbox" id="jobCleanTemp" checked> Clean Temp
+                            Images</label>
                     </div>
 
                     <hr style="border-color: var(--color-border); margin: var(--spacing-md) 0;">
-                    <p class="text-secondary" style="font-size: 11px; margin-bottom: var(--spacing-sm); text-transform: uppercase;" data-i18n="job.adv.diagSection">Diagnostyka</p>
+                    <p class="text-secondary" style="font-size: 11px; margin-bottom: var(--spacing-sm);">Diagnostyka</p>
                     <div class="form-group">
-                        <label class="checkbox-label" data-i18n-title="job.tooltips.debug">
-                             <input type="checkbox" id="jobDebugArtifacts">
-                             <span data-i18n="job.adv.debug">Zapisuj błędy (Debug Artifacts)</span>
-                        </label>
+                        <label class="checkbox-label"><input type="checkbox" id="jobDebugArtifacts"> Debug Artifacts
+                            (screenshoty błędów)</label>
                     </div>
                     <div class="form-group">
-                        <label class="checkbox-label" data-i18n-title="job.tooltips.video">
-                             <input type="checkbox" id="jobCaptureVideo">
-                             <span data-i18n="job.adv.video">Nagrywaj wideo</span>
-                        </label>
+                        <label class="checkbox-label"><input type="checkbox" id="jobCaptureVideo"> Capture Video</label>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Tracing Mode</label>
+                        <select class="form-select" id="jobTracingMode">
+                            <option value="off">Wyłączony</option>
+                            <option value="on_failure">Tylko na błąd</option>
+                            <option value="continuous">Ciągły</option>
+                        </select>
+                    </div>
+
+                    <hr style="border-color: var(--color-border); margin: var(--spacing-md) 0;">
+                    <p class="text-secondary" style="font-size: 11px; margin-bottom: var(--spacing-sm);">Sesja</p>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="checkbox-label"><input type="checkbox" id="jobAuthEnsure" checked> Auto-ensure
+                                sesji</label>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Interwał (sek)</label>
+                            <input type="number" class="form-input" id="jobAuthEnsureInterval" value="900" min="60">
+                        </div>
+                    </div>
+
+                    <hr style="border-color: var(--color-border); margin: var(--spacing-md) 0;">
+                    <p class="text-secondary" style="font-size: 11px; margin-bottom: var(--spacing-sm);">Model Pro</p>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Retry (ilość)</label>
+                            <input type="number" class="form-input" id="jobModelSwitchRetries" value="3" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Cooldown (ms)</label>
+                            <input type="number" class="form-input" id="jobModelSwitchCooldown" value="1200" min="0">
+                        </div>
+                    </div>
+
+                    <hr style="border-color: var(--color-border); margin: var(--spacing-md) 0;">
+                    <p class="text-secondary" style="font-size: 11px; margin-bottom: var(--spacing-sm);">Limit Pro</p>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Sprawdzaj co (sek)</label>
+                            <input type="number" class="form-input" id="jobLimitCheckInterval" value="1800" min="60">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Bufor pauzy (sek)</label>
+                            <input type="number" class="form-input" id="jobProPauseBuffer" value="180" min="0">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Fallback pauzy (min)</label>
+                        <input type="number" class="form-input" id="jobProFallbackPause" value="60" min="1">
+                    </div>
+
+                    <hr style="border-color: var(--color-border); margin: var(--spacing-md) 0;">
+                    <div class="form-group">
+                        <label class="form-label">Browser ID (opcjonalne)</label>
+                        <input type="text" class="form-input" id="jobBrowserId" placeholder="np. pw_custom_01">
                     </div>
                 </div>
             </div>
-        </div>
-
-        <!-- Settings Tab -->
-        <div class="tab-panel" id="tab-settings">
-          <div class="page-header">
-            <div>
-              <h1 class="page-title" data-i18n="settings.title">Ustawienia</h1>
-              <p class="page-subtitle" data-i18n="settings.subtitle">Konfiguracja systemu</p>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeStartJobModal()">Anuluj</button>
+                <button class="btn btn-success" onclick="startJob()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="5 3 19 12 5 21 5 3" />
+                    </svg>
+                    Uruchom Job
+                </button>
             </div>
-          </div>
-
-          <div class="settings-container">
-             <div class="config-panel active" style="padding: var(--spacing-lg);">
-                <div class="form-group">
-                    <label class="form-label" data-i18n="settings.general">Ogólne</label>
-                    <div class="form-group">
-                         <label class="checkbox-label">
-                            <input type="checkbox" id="settingAutoRestart" onchange="updateSetting('autoRestart', this.checked)">
-                            <span data-i18n="settings.autoRestart">Auto-restart workerów po błędzie</span>
-                         </label>
-                    </div>
-                </div>
-
-                <hr style="margin: var(--spacing-md) 0; border-color: var(--color-border);">
-                
-                <div class="form-group">
-                    <label class="form-label" data-i18n="settings.display">Wyświetlanie</label>
-                    <div class="form-group">
-                        <label class="form-label" data-i18n="settings.x11Display">X11 DISPLAY</label>
-                         <input type="text" class="form-input" id="settingDisplay" value=":0" onchange="updateSetting('display', this.value)">
-                    </div>
-                </div>
-
-                <hr style="margin: var(--spacing-md) 0; border-color: var(--color-border);">
-
-                <div class="form-group">
-                     <label class="form-label" data-i18n="settings.maintenance">Konserwacja</label>
-                     <div class="flex gap-sm">
-                        <button class="btn btn-secondary" onclick="openCleanupModal()">
-                             <span data-i18n="settings.cleanupFolders">Wyczyść foldery</span>
-                        </button>
-                        <button class="btn btn-secondary" onclick="syncProfiles()">
-                             <span data-i18n="settings.syncProfiles">Synchronizuj profile</span>
-                        </button>
-                     </div>
-                </div>
-
-                <hr style="margin: var(--spacing-md) 0; border-color: var(--color-border);">
-                
-                <div class="form-group">
-                    <label class="form-label" data-i18n="settings.language">Język</label>
-                    <div class="flex gap-sm">
-                        <button class="btn btn-secondary lang-btn" data-lang="pl" onclick="setLanguage('pl')">PL</button>
-                        <button class="btn btn-secondary lang-btn" data-lang="en" onclick="setLanguage('en')">EN</button>
-                    </div>
-                </div>
-             </div>
-          </div>
         </div>
+    </div>
+
+    <!-- File Browser Modal -->
     <div class="modal-overlay" id="fileBrowserModal">
       <div class="modal" style="max-width: 800px; height: 80vh">
         <div class="modal-header">
@@ -2362,36 +2821,8 @@
             Inicjalizacja procesu logowania...
           </div>
         </div>
-        <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
-          <button class="btn btn-primary" onclick="copyLoginLogs()" id="copyLoginLogsBtn" style="display: flex; align-items: center; gap: 8px;">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-            Kopiuj logi
-          </button>
+        <div class="modal-footer">
           <button class="btn btn-secondary" onclick="closeLoginLogModal()">
-            Zamknij
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Profile Details Modal -->
-    <div class="modal-overlay" id="profileModal">
-      <div class="modal" style="max-width: 500px">
-        <div class="modal-header">
-          <h3 class="modal-title">Szczegóły profilu: <span id="modalProfileName"></span></h3>
-          <button class="modal-close" onclick="closeModal()">
-            &times;
-          </button>
-        </div>
-        <div class="modal-body" id="modalContent">
-          <!-- Content will be populated by JavaScript -->
-        </div>
-        <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
-          <button class="btn btn-primary" onclick="copyProfileInfo()" style="display: flex; align-items: center; gap: 8px;">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-            Kopiuj informacje
-          </button>
-          <button class="btn btn-secondary" onclick="closeModal()">
             Zamknij
           </button>
         </div>
@@ -2479,14 +2910,10 @@
             </label>
           </div>
           <div
+            id="cleanupStatus-modal"
             class="text-secondary"
-            style="font-size: 12px; margin-top: var(--spacing-sm); display: flex; align-items: center; justify-content: space-between;"
-          >
-            <span id="cleanupStatus-modal"></span>
-            <button class="btn btn-ghost btn-sm" onclick="copyFromElement('cleanupStatus-modal', this)" title="Kopiuj status" style="display: none;" id="cleanupCopyBtn">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-            </button>
-          </div>
+            style="font-size: 12px; margin-top: var(--spacing-sm)"
+          ></div>
         </div>
         <div class="modal-footer">
           <button class="btn btn-secondary" onclick="closeCleanupModal()">
@@ -2533,35 +2960,6 @@
       </div>
     </div>
 
-    <!-- Reset Config Confirmation Modal -->
-    <div class="modal-overlay" id="resetConfigModal">
-      <div class="modal" style="max-width: 400px">
-        <div class="modal-header">
-          <h3 class="modal-title">Przywróć domyślne</h3>
-          <button class="modal-close" onclick="closeResetConfigModal()">
-            &times;
-          </button>
-        </div>
-        <div class="modal-body">
-          <p>Czy na pewno chcesz przywrócić domyślne ustawienia konfiguracji?</p>
-          <p
-            class="text-secondary"
-            style="font-size: 12px; margin-top: var(--spacing-sm)"
-          >
-            Wszystkie wprowadzone zmiany w formularzu zostaną utracone.
-          </p>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary" onclick="closeResetConfigModal()">
-            Anuluj
-          </button>
-          <button class="btn btn-primary" onclick="confirmResetJobConfig()">
-            Przywróć
-          </button>
-        </div>
-      </div>
-    </div>
-
     <!-- Image Preview Modal -->
     <div
       class="modal-overlay"
@@ -2599,11 +2997,8 @@
         <strong id="nonProCount">0</strong></span
       >
       <span class="text-secondary" style="margin-left: var(--spacing-sm)"
-        >Profil(e): <span id="nonProProfiles">-</span>
-        <button class="btn btn-ghost btn-sm" onclick="copyFromElement('nonProProfiles', this)" title="Kopiuj listę" style="padding: 0 4px; height: 16px; margin-left: 4px;">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-        </button>
-      </span>
+        >Profil(e): <span id="nonProProfiles">-</span></span
+      >
       <button class="btn btn-ghost btn-sm" onclick="hideNonProBanner()">
         ×
       </button>
@@ -2645,9 +3040,6 @@
         </div>
       </div>
     </div>
-
-    <!-- Toast Container -->
-    <div id="toastContainer" class="toast-container"></div>
 
     <script>
       // ============================================
@@ -2812,94 +3204,6 @@
           "startJob.addProfile": "Dodaj",
           "startJob.cancel": "Anuluj",
           "startJob.run": "Uruchom Job",
-
-          "nav.jobconfig": "Konfiguracja Job",
-          "job.title": "Konfiguracja Job",
-          "job.subtitle": "Ustawienia nowego zadania OCR",
-          "job.startBtn": "Uruchom Job",
-          "job.resetBtn": "Przywróć domyślne",
-
-          "job.tabs.basic": "Podstawowe",
-          "job.tabs.performance": "Wydajność",
-          "job.tabs.database": "Baza danych",
-          "job.tabs.preprocess": "Przetwarzanie obrazu",
-          "job.tabs.advanced": "Zaawansowane",
-
-          "job.basic.sourcePath": "Ścieżka źródłowa",
-          "job.basic.batchId": "ID Partii (Batch ID)",
-          "job.basic.headed": "Tryb z oknem (Headed)",
-          "job.basic.engine": "Silnik OCR",
-          "job.basic.profiles": "Profile do uruchomienia",
-          "job.basic.all": "Wszystkie",
-          "job.basic.okLimit": "OK Limit",
-          "job.basic.clear": "Wyczyść",
-          "job.basic.add": "Dodaj",
-
-          "job.perf.workers": "Liczba workerów",
-          "job.perf.scans": "Skanów na worker",
-          "job.perf.timeout": "Limit czasu (Collect Timeout)",
-          "job.perf.tabsSection": "Karty przeglądarki",
-          "job.perf.closeIdle": "Auto-zamykaj nieużywane",
-          "job.perf.maxTabs": "Max kart / kontekst",
-          "job.perf.ctxSection": "Konteksty",
-          "job.perf.isolated": "Izolowane konteksty",
-          "job.perf.pool": "Pula kontekstów",
-          "job.perf.uiSection": "Profil UI",
-          "job.perf.viewportW": "Viewport Width",
-          "job.perf.viewportH": "Viewport Height",
-          "job.perf.reducedMotion": "Ogranicz animacje",
-
-          "job.db.enabled": "PostgreSQL Włączony",
-          "job.db.dsn": "DSN Bazy",
-          "job.db.table": "Tabela",
-          "job.db.syncSection": "Synchronizacja",
-          "job.db.syncBtn": "Synchronizuj profile (Remote)",
-          "job.db.syncDesc": "Kopiuje lokalne profile (Gemini) na zdalnego workera",
-
-          "job.prep.desc": "Parametry przetwarzania obrazu. Domyślne wartości są optymalne.",
-          "job.prep.scaleSection": "Skalowanie i Szum",
-          "job.prep.maxDim": "Max Dimension",
-          "job.prep.median": "Median Kernel",
-          "job.prep.denoise": "Denoise Strength",
-          "job.prep.morph": "Morph Kernel",
-          "job.prep.contrastSection": "Kontrast i Kontury",
-          "job.prep.claheClip": "CLAHE Clip Limit",
-          "job.prep.claheGrid": "CLAHE Grid Size",
-          "job.prep.localSigma": "Local Contrast Sigma",
-          "job.prep.localAmount": "Local Contrast Amount",
-
-          "job.adv.mode": "Tryb pracy",
-          "job.adv.continue": "Tryb kontynuacji (Continue)",
-          "job.adv.proOnly": "Tylko model Pro",
-          "job.adv.clean": "Czyść pliki tymczasowe",
-          "job.adv.diagSection": "Diagnostyka",
-          "job.adv.debug": "Debug Artifacts",
-          "job.adv.video": "Nagrywaj wideo",
-
-          "job.tooltips.sourcePath": "Folder na serwerze zawierający zdjęcia dokumentów do przetworzenia.",
-          "job.tooltips.batchId": "Unikalny identyfikator partii (Batch ID). Jeśli puste, zostanie wygenerowany automatycznie.",
-          "job.tooltips.headed": "Pokaż okno przeglądarki podczas pracy. Przydatne do obserwacji, ale działa wolniej.",
-          "job.tooltips.engine": "Wybierz silnik OCR. 'Gemini' jest zalecany.",
-          "job.tooltips.workers": "Liczba równoległych procesów. Więcej = szybciej, ale większe zużycie zasobów (CPU/RAM).",
-          "job.tooltips.scans": "Ile dokumentów przetworzyć w jednej serii (instancji przeglądarki).",
-          "job.tooltips.timeout": "Maksymalny czas oczekiwania na przetworzenie jednego dokumentu (sekundy).",
-          "job.tooltips.closeIdle": "Zamykaj karty po zakonczeniu zadania, aby zwolnić pamięć RAM.",
-          "job.tooltips.maxTabs": "Limit otwartych kart na kontekst przeglądarki. 0 = brak limitu.",
-          "job.tooltips.isolated": "Uruchom każdego workera w osobnej instancji przeglądarki (większa stabilność).",
-          "job.tooltips.pool": "Liczba przygotowanych kontekstów w puli.",
-          "job.tooltips.reducedMotion": "Wyłącz animacje na stronach (może przyspieszyć działanie).",
-          "job.tooltips.pgEnabled": "Włącz zapisywanie wyników do bazy danych PostgreSQL.",
-          "job.tooltips.maxDim": "Przeskaluj obraz w dół, jeśli jest większy niż X pikseli.",
-          "job.tooltips.median": "Filtr usuwający szum (kropki) z obrazu.",
-          "job.tooltips.denoise": "Siła odszumiania.",
-          "job.tooltips.morph": "Operacje morfologiczne poprawiające kształt liter.",
-          "job.tooltips.continue": "Pomiń już przetworzone pliki (wznów przerwaną pracę).",
-          "job.tooltips.proOnly": "Używaj tylko modelu Pro (najwyższa jakość).",
-          "job.tooltips.clean": "Usuń pliki tymczasowe z dysku po zakończeniu pracy.",
-          "job.tooltips.debug": "Zachowaj pliki debugowania (screenshoty, html) w razie błędu.",
-          "job.tooltips.video": "Nagrywaj wideo z procesu (tylko w trybie Headed).",
-
-          // Cleanup Modal
 
           // Cleanup Modal
           "cleanup.title": "Wyczyść foldery",
@@ -3111,93 +3415,7 @@
           "startJob.cancel": "Cancel",
           "startJob.run": "Run Job",
 
-          "nav.jobconfig": "Job Config",
-          "job.title": "Job Configuration",
-          "job.subtitle": "New OCR Job Settings",
-          "job.startBtn": "Start Job",
-
-          "job.tabs.basic": "Basic",
-          "job.tabs.performance": "Performance",
-          "job.tabs.database": "Database",
-          "job.tabs.preprocess": "Preprocess",
-          "job.tabs.advanced": "Advanced",
-
-          "job.basic.sourcePath": "Source Path",
-          "job.basic.batchId": "Batch ID",
-          "job.basic.headed": "Headed Mode",
-          "job.basic.engine": "OCR Engine",
-          "job.basic.profiles": "Profiles to run",
-          "job.basic.all": "All",
-          "job.basic.okLimit": "OK Limit",
-          "job.basic.clear": "Clear",
-          "job.basic.add": "Add",
-
-          "job.perf.workers": "Workers",
-          "job.perf.scans": "Scans per Worker",
-          "job.perf.timeout": "Collect Timeout",
-          "job.perf.tabsSection": "Browser Tabs",
-          "job.perf.closeIdle": "Auto-close idle",
-          "job.perf.maxTabs": "Max Tabs / Context",
-          "job.perf.ctxSection": "Contexts",
-          "job.perf.isolated": "Isolated Contexts",
-          "job.perf.pool": "Context Pool",
-          "job.perf.uiSection": "UI Profile",
-          "job.perf.viewportW": "Viewport Width",
-          "job.perf.viewportH": "Viewport Height",
-          "job.perf.reducedMotion": "Reduced Motion",
-
-          "job.db.enabled": "PostgreSQL Enabled",
-          "job.db.dsn": "DSN",
-          "job.db.table": "Table",
-          "job.db.syncSection": "Sync",
-          "job.db.syncBtn": "Sync Profiles (Remote)",
-          "job.db.syncDesc": "Copies local profiles to remote worker",
-
-          "job.prep.desc": "Image processing parameters.",
-          "job.prep.scaleSection": "Scaling & Noise",
-          "job.prep.maxDim": "Max Dimension",
-          "job.prep.median": "Median Kernel",
-          "job.prep.denoise": "Denoise Strength",
-          "job.prep.morph": "Morph Kernel",
-          "job.prep.contrastSection": "Contrast & Contours",
-          "job.prep.claheClip": "CLAHE Clip Limit",
-          "job.prep.claheGrid": "CLAHE Grid Size",
-          "job.prep.localSigma": "Local Contrast Sigma",
-          "job.prep.localAmount": "Local Contrast Amount",
-
-          "job.adv.mode": "Mode",
-          "job.adv.continue": "Continue Mode",
-          "job.adv.proOnly": "Pro Only",
-          "job.adv.clean": "Clean Temp Files",
-          "job.adv.diagSection": "Diagnostics",
-          "job.adv.debug": "Debug Artifacts",
-          "job.adv.video": "Capture Video",
-
-          "job.tooltips.sourcePath": "Source folder path containing images.",
-          "job.tooltips.batchId": "Unique identifier for the batch.",
-          "job.tooltips.headed": "Show browser window during processing.",
-          "job.tooltips.engine": "Select OCR Engine.",
-          "job.tooltips.workers": "Number of parallel workers.",
-          "job.tooltips.scans": "Number of scans per worker session.",
-          "job.tooltips.timeout": "Max time to wait for a document.",
-          "job.tooltips.closeIdle": "Close idle tabs to save RAM.",
-          "job.tooltips.maxTabs": "Max tabs limit per context.",
-          "job.tooltips.isolated": "Run workers in isolated browser instances.",
-          "job.tooltips.pool": "Number of contexts in pool.",
-          "job.tooltips.reducedMotion": "Disable animations.",
-          "job.tooltips.pgEnabled": "Enable PostgreSQL output.",
-          "job.tooltips.maxDim": "Downscale image if larger than X px.",
-          "job.tooltips.median": "Noise removal filter.",
-          "job.tooltips.denoise": "Denoise strength.",
-          "job.tooltips.morph": "Morphological operations.",
-          "job.tooltips.continue": "Resume job (skip processed).",
-          "job.tooltips.proOnly": "Use Pro model only.",
-          "job.tooltips.clean": "Remove temp files after job.",
-          "job.tooltips.debug": "Keep debug artifacts on error.",
-          "job.tooltips.video": "Record video of the process.",
-
           // Cleanup Modal
-
           "cleanup.title": "Clean folders",
           "cleanup.selectFolders": "Select folders to clean:",
           "cleanup.jobs": "Job data",
@@ -3532,7 +3750,7 @@
         if (profile) {
           profile.status = "starting";
           profile.status_label = "STARTING...";
-          updateProfiles(profilesData); // Re-render UI with new status
+          filterProfiles(); // Re-render table
         }
 
         showToast(
@@ -3541,8 +3759,7 @@
           `Uruchamianie profilu ${profileName}`,
         );
         try {
-          const headed = document.getElementById('manualHeadedMode')?.checked || false;
-          const response = await fetch(`/api/profile/${profileName}/start?headed=${headed}`, {
+          const response = await fetch(`/api/profile/${profileName}/start`, {
             method: "POST",
           });
           if (response.ok) {
@@ -3556,7 +3773,7 @@
             if (profile) {
               profile.status = "active";
               profile.status_label = "ACTIVE";
-              updateProfiles(profilesData);
+              filterProfiles();
             }
 
             setTimeout(refreshData, 100); // Fast refresh
@@ -3576,7 +3793,7 @@
         if (profile) {
           profile.status = "stopping";
           profile.status_label = "STOPPING...";
-          updateProfiles(profilesData); // Re-render UI with new status
+          filterProfiles(); // Re-render table
         }
 
         showToast(
@@ -3599,7 +3816,7 @@
             if (profile) {
               profile.status = "idle"; // or whatever the stopped status is, usually 'idle' or 'terminated'
               profile.status_label = "IDLE";
-              updateProfiles(profilesData);
+              filterProfiles();
             }
 
             setTimeout(refreshData, 100); // Fast refresh
@@ -3846,69 +4063,7 @@
       }
 
       function updateProfiles(profiles) {
-        // Detect status changes and show notifications
-        if (profilesData && profilesData.length > 0) {
-          profiles.forEach((newProfile) => {
-            const oldProfile = profilesData.find(p => p.name === newProfile.name);
-            if (oldProfile) {
-              const oldStatus = oldProfile.status || 'idle';
-              const newStatus = newProfile.status || 'idle';
-              
-              // Skip if status hasn't changed
-              if (oldStatus === newStatus) {
-                return;
-              }
-              
-              console.log(`[Status Change] ${newProfile.name}: ${oldStatus} -> ${newStatus}`);
-              
-              // Detect crashes and unexpected stops
-              // A profile is considered crashed if it was running (active/starting) and suddenly stopped
-              const wasRunning = ['active', 'starting'].includes(oldStatus);
-              const isNowStopped = ['idle', 'terminated', 'error', 'crashed'].includes(newStatus);
-              const isExpectedStop = oldStatus === 'stopping'; // Expected stop transition
-              
-              if (wasRunning && isNowStopped && !isExpectedStop) {
-                // Profile crashed or stopped unexpectedly
-                if (newStatus === 'error' || newStatus === 'crashed') {
-                  showToast(
-                    'error',
-                    'Profil uległ awarii',
-                    `Profil ${newProfile.name} uległ awarii (status: ${newStatus})`
-                  );
-                } else if (newStatus === 'idle' || newStatus === 'terminated') {
-                  showToast(
-                    'warning',
-                    'Profil zatrzymany',
-                    `Profil ${newProfile.name} został nieoczekiwanie zatrzymany`
-                  );
-                }
-              } else if (oldStatus === 'active' && newStatus === 'limit') {
-                // Limit reached
-                showToast(
-                  'warning',
-                  'Osiągnięto limit',
-                  `Profil ${newProfile.name} osiągnął limit i został zatrzymany`
-                );
-              } else if (oldStatus === 'active' && newStatus === 'paused') {
-                // Profile paused
-                showToast(
-                  'info',
-                  'Profil wstrzymany',
-                  `Profil ${newProfile.name} został wstrzymany`
-                );
-              }
-              
-              // Detect successful stops (from stopping to idle/terminated)
-              if (oldStatus === 'stopping' && (newStatus === 'idle' || newStatus === 'terminated')) {
-                // This is expected, stopProfile already shows success toast
-                // No additional notification needed
-              }
-            }
-          });
-        }
-        
         profilesData = profiles;
-
 
         profiles.forEach((profile) => {
           const statusValue = profile.status || "idle";
@@ -3946,7 +4101,7 @@
               ".profile-card-actions",
             );
             if (actionsContainer) {
-              const isActive = statusValue === "active" || statusValue === "starting" || statusValue === "stopping";
+              const isActive = statusValue === "active";
               actionsContainer.innerHTML = `
                             ${
                               isActive
@@ -3999,8 +4154,6 @@
               if (actionsDiv) {
                 const isActive =
                   statusValue === "active" ||
-                  statusValue === "starting" ||
-                  statusValue === "stopping" ||
                   labelUpper.includes("START") ||
                   labelUpper.includes("PONAWIANIE");
                 // If starting/retrying, we usually want to show Stop too, or at least disable Start
@@ -4166,154 +4319,48 @@
 
         const profile = profilesData.find((p) => p.name === profileName) || {};
 
-        // Build comprehensive profile info
-        const infoSections = [];
-        
-        // Basic Info Section
-        infoSections.push(`
-          <div class="info-section">
-            <h4 style="font-size: 14px; font-weight: 600; margin-bottom: var(--spacing-sm); color: var(--color-text-primary);">Podstawowe informacje</h4>
-            <div style="display: grid; grid-template-columns: 140px 1fr; gap: var(--spacing-xs); font-size: 13px;">
-              <span class="text-secondary">Nazwa profilu:</span>
-              <span class="text-primary font-medium">${escapeHtml(profile.name || '-')}</span>
-              
-              <span class="text-secondary">Status:</span>
-              <span class="badge badge-${profile.status === "active" ? "success" : profile.status === "paused" ? "warning" : profile.status === "limit" ? "error" : "neutral"}">
-                ${escapeHtml(profile.status || "idle")}
-              </span>
-            </div>
-          </div>
-        `);
-
-        // Statistics Section
-        infoSections.push(`
-          <div class="info-section">
-            <h4 style="font-size: 14px; font-weight: 600; margin-bottom: var(--spacing-sm); color: var(--color-text-primary);">Statystyki</h4>
-            <div style="display: grid; grid-template-columns: 140px 1fr; gap: var(--spacing-xs); font-size: 13px;">
-              <span class="text-secondary">Przetworzonych:</span>
-              <span class="text-primary font-bold">${escapeHtml(profile.processed || 0)}</span>
-              
-              <span class="text-secondary">Tokeny:</span>
-              <span class="text-primary font-bold">${escapeHtml(profile.tokens_k || 0)}k</span>
-              
-              <span class="text-secondary">Błędy:</span>
-              <span class="text-primary font-bold ${(profile.errors || 0) > 0 ? 'text-error' : ''}">${escapeHtml(profile.errors || 0)}</span>
-            </div>
-          </div>
-        `);
-
-        // Activity Section
-        const activityInfo = [];
-        if (profile.last_activity) {
-          activityInfo.push(`
-            <span class="text-secondary">Ostatnia aktywność:</span>
-            <span class="text-primary">${escapeHtml(profile.last_activity)}</span>
-          `);
-        }
-        if (profile.current_file) {
-          activityInfo.push(`
-            <span class="text-secondary">Aktualny plik:</span>
-            <span class="text-primary font-mono" style="font-size: 11px; word-break: break-all;">${escapeHtml(profile.current_file)}</span>
-          `);
-        }
-        
-        if (activityInfo.length > 0) {
-          infoSections.push(`
-            <div class="info-section">
-              <h4 style="font-size: 14px; font-weight: 600; margin-bottom: var(--spacing-sm); color: var(--color-text-primary);">Aktywność</h4>
-              <div style="display: grid; grid-template-columns: 140px 1fr; gap: var(--spacing-xs); font-size: 13px;">
-                ${activityInfo.join('')}
-              </div>
-            </div>
-          `);
-        }
-
-        // Additional fields if available
-        const additionalFields = [];
-        if (profile.pid) {
-          additionalFields.push(`
-            <span class="text-secondary">PID:</span>
-            <span class="text-primary font-mono">${escapeHtml(profile.pid)}</span>
-          `);
-        }
-        if (profile.uptime) {
-          additionalFields.push(`
-            <span class="text-secondary">Uptime:</span>
-            <span class="text-primary">${escapeHtml(profile.uptime)}</span>
-          `);
-        }
-        
-        if (additionalFields.length > 0) {
-          infoSections.push(`
-            <div class="info-section">
-              <h4 style="font-size: 14px; font-weight: 600; margin-bottom: var(--spacing-sm); color: var(--color-text-primary);">Szczegóły techniczne</h4>
-              <div style="display: grid; grid-template-columns: 140px 1fr; gap: var(--spacing-xs); font-size: 13px;">
-                ${additionalFields.join('')}
-              </div>
-            </div>
-          `);
-        }
-
         document.getElementById("modalContent").innerHTML = `
-          <div style="display: flex; flex-direction: column; gap: var(--spacing-md);">
-            ${infoSections.join('')}
-          </div>
-        `;
+                <div style="display: grid; gap: var(--spacing-md);">
+                    <div class="form-group">
+                        <label class="form-label">Status</label>
+                        <span class="badge badge-${profile.status === "active" ? "success" : profile.status === "paused" ? "warning" : profile.status === "limit" ? "error" : "neutral"}">
+                            ${escapeHtml(profile.status || "idle")}
+                        </span>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Przetworzonych</label>
+                        <div class="text-primary font-bold">${escapeHtml(profile.processed || 0)}</div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Tokeny</label>
+                        <div class="text-primary font-bold">${escapeHtml(profile.tokens_k || 0)}k</div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Błędy</label>
+                        <div class="text-primary font-bold">${escapeHtml(profile.errors || 0)}</div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Ostatnia aktywność</label>
+                        <div class="text-secondary">${escapeHtml(profile.last_activity || "-")}</div>
+                    </div>
+                    ${
+                      profile.current_file
+                        ? `
+                    <div class="form-group">
+                        <label class="form-label">Aktualny plik</label>
+                        <div class="text-secondary font-mono" style="font-size: 12px; word-break: break-all;">${escapeHtml(profile.current_file)}</div>
+                    </div>
+                    `
+                        : ""
+                    }
+                </div>
+            `;
 
         modal.classList.add("visible");
       }
 
       function closeModal() {
         document.getElementById("profileModal").classList.remove("visible");
-      }
-
-      function copyProfileInfo() {
-        const profileName = document.getElementById("modalProfileName").textContent;
-        const profile = profilesData.find((p) => p.name === profileName) || {};
-        
-        // Build text to copy
-        const lines = [];
-        lines.push(`=== Profil: ${profile.name || '-'} ===`);
-        lines.push('');
-        lines.push('PODSTAWOWE INFORMACJE:');
-        lines.push(`  Nazwa profilu: ${profile.name || '-'}`);
-        lines.push(`  Status: ${profile.status || 'idle'}`);
-        lines.push('');
-        lines.push('STATYSTYKI:');
-        lines.push(`  Przetworzonych: ${profile.processed || 0}`);
-        lines.push(`  Tokeny: ${profile.tokens_k || 0}k`);
-        lines.push(`  Błędy: ${profile.errors || 0}`);
-        
-        if (profile.last_activity || profile.current_file) {
-          lines.push('');
-          lines.push('AKTYWNOŚĆ:');
-          if (profile.last_activity) {
-            lines.push(`  Ostatnia aktywność: ${profile.last_activity}`);
-          }
-          if (profile.current_file) {
-            lines.push(`  Aktualny plik: ${profile.current_file}`);
-          }
-        }
-        
-        if (profile.pid || profile.uptime) {
-          lines.push('');
-          lines.push('SZCZEGÓŁY TECHNICZNE:');
-          if (profile.pid) {
-            lines.push(`  PID: ${profile.pid}`);
-          }
-          if (profile.uptime) {
-            lines.push(`  Uptime: ${profile.uptime}`);
-          }
-        }
-        
-        const textToCopy = lines.join('\n');
-        
-        navigator.clipboard.writeText(textToCopy).then(() => {
-          showToast('success', 'Skopiowano', 'Informacje o profilu zostały skopiowane do schowka');
-        }).catch(err => {
-          console.error('Failed to copy:', err);
-          showToast('error', 'Błąd', 'Nie udało się skopiować informacji');
-        });
       }
 
       // Close modal on overlay click
@@ -4333,8 +4380,7 @@
         logs: "Logi",
         limits: "Limity",
         postprocess: "Post-Process",
-        jobconfig: "Konfiguracja Job",
-
+        jobconfig: "nav.jobconfig", // Using the exact key/text requested or from data-i18n
         settings: "Ustawienia",
       };
 
@@ -4423,7 +4469,23 @@
         if (mainTab === "logs") refreshLogs();
 
         // 2. Switch Sub Tab if applicable
+        if (mainTab === "jobconfig" && subTab) {
+          // Manually switch Config Tab UI
+          document
+            .querySelectorAll(".config-tab")
+            .forEach((tab) => tab.classList.remove("active"));
+          document
+            .querySelectorAll(".config-panel")
+            .forEach((panel) => panel.classList.remove("active"));
 
+          const selectedTab = document.querySelector(
+            `.config-tab[data-config-tab="${subTab}"]`,
+          );
+          const selectedPanel = document.getElementById(`config-${subTab}`);
+
+          if (selectedTab) selectedTab.classList.add("active");
+          if (selectedPanel) selectedPanel.classList.add("active");
+        }
 
         updateBreadcrumb(mainTab, subTab);
       }
@@ -4453,8 +4515,6 @@
           info: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
         };
 
-        const copyIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
-        
         const toast = document.createElement("div");
         toast.className = `toast ${type}`;
         toast.innerHTML = `
@@ -4463,46 +4523,15 @@
                     <div class="toast-title">${escapeHtml(title)}</div>
                     <div class="toast-message">${escapeHtml(message)}</div>
                 </div>
-                <div class="toast-actions">
-                    <button class="toast-copy" title="Kopiuj wiadomość">${copyIcon}</button>
-                    <button class="toast-close">×</button>
-                </div>
+                <button class="toast-close" onclick="this.parentElement.remove()">×</button>
             `;
-        
-        // Add copy functionality
-        const copyBtn = toast.querySelector('.toast-copy');
-        const closeBtn = toast.querySelector('.toast-close');
-        
-        copyBtn.addEventListener('click', async () => {
-            try {
-                const textToCopy = `${title}\n${message}`;
-                await navigator.clipboard.writeText(textToCopy);
-                
-                // Visual feedback
-                copyBtn.classList.add('copied');
-                copyBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>';
-                
-                setTimeout(() => {
-                    copyBtn.classList.remove('copied');
-                    copyBtn.innerHTML = copyIcon;
-                }, 2000);
-            } catch (err) {
-                console.error('Failed to copy:', err);
-            }
-        });
-        
-        closeBtn.addEventListener('click', () => {
-            toast.remove();
-        });
 
         container.appendChild(toast);
 
         // Auto remove after 5 seconds
         setTimeout(() => {
-          if (toast.parentElement) {
-            toast.style.opacity = "0";
-            setTimeout(() => toast.remove(), 300);
-          }
+          toast.style.opacity = "0";
+          setTimeout(() => toast.remove(), 300);
         }, 5000);
       }
 
@@ -4521,10 +4550,786 @@
         });
 
       // ============================================
-      // Start Job Modal (Recovered)
+      // Initialize
+      // ============================================
+
+      document.addEventListener("DOMContentLoaded", function () {
+
+        // [Recovered] Dynamically added translations for Start Job Modal
+        if(typeof translations !== 'undefined' && translations.pl) {
+        }
+        // Load execution modes from localStorage
+        loadExecutionModes();
+
+        // Load default source path from API
+        loadDefaultSourcePath();
+
+        // Initial data refresh
+        refreshData();
+
+        // Auto refresh every 1 second (was 10s)
+        setInterval(refreshData, 1000);
+
+        // Start activity auto-refresh
+        toggleAutoRefresh();
+
+        // Update filter counts initially
+        filterProfiles();
+      });
+
+
+
+      // Removed duplicate switchConfigTab function
+
+      function selectAllJobProfiles() {
+        document
+          .querySelectorAll(".job-profile-cb")
+          .forEach((cb) => (cb.checked = true));
+      }
+
+      function selectOkLimitProfiles() {
+        // Select only profiles that don't have limit status
+        document.querySelectorAll(".job-profile-cb").forEach((cb) => {
+          const profile = profilesData.find((p) => p.name === cb.value);
+          cb.checked = profile && profile.status !== "limit";
+        });
+      }
+
+      function clearJobProfiles() {
+        document
+          .querySelectorAll(".job-profile-cb")
+          .forEach((cb) => (cb.checked = false));
+      }
+
+      async function startJob() {
+        const sourcePath = document.getElementById("jobSourcePath").value;
+        if (!sourcePath) {
+          showToast("error", "Błąd", "Podaj ścieżkę źródłową");
+          return;
+        }
+
+        const selectedProfiles = [
+          ...document.querySelectorAll(".job-profile-cb:checked"),
+        ].map((cb) => cb.value);
+        if (selectedProfiles.length === 0) {
+          showToast("error", "Błąd", "Wybierz przynajmniej jeden profil");
+          return;
+        }
+
+        localStorage.setItem("lastSourcePath", sourcePath);
+
+        // Split profiles by execution mode
+        const profilesByMode = {
+          profiles: [],
+          remote_browser_profiles: [],
+          remote_ssh_profiles: [],
+          remote_desktop_profiles: [],
+          remote_desktop_browser_profiles: [],
+        };
+
+        selectedProfiles.forEach((profileName) => {
+          const mode = getExecutionMode(profileName);
+          switch (mode) {
+            case "local":
+              profilesByMode.profiles.push(profileName);
+              break;
+            case "wsl_browser":
+              profilesByMode.remote_browser_profiles.push(profileName);
+              break;
+            case "wsl_worker":
+              profilesByMode.remote_ssh_profiles.push(profileName);
+              break;
+            case "desktop_browser":
+              profilesByMode.remote_desktop_browser_profiles.push(profileName);
+              break;
+            case "desktop_worker":
+              profilesByMode.remote_desktop_profiles.push(profileName);
+              break;
+          }
+        });
+
+        const jobParams = {
+          source_dir: sourcePath,
+          batch_id: document.getElementById("jobBatchId").value || null,
+          ...profilesByMode,
+          headed: document.getElementById("jobHeadedMode").checked,
+          workers: parseInt(document.getElementById("jobWorkers").value) || 2,
+          scans_per_worker:
+            parseInt(document.getElementById("jobScansPerWorker").value) || 2,
+          collect_timeout_sec:
+            parseInt(document.getElementById("jobCollectTimeout").value) || 400,
+          pg_enabled: document.getElementById("jobPgEnabled").checked,
+          pg_dsn: document.getElementById("jobPgDsn").value || null,
+          pg_table:
+            document.getElementById("jobPgTable").value ||
+            "public.ocr_raw_texts",
+          continue_mode: document.getElementById("jobContinueMode").checked,
+          pro_only: document.getElementById("jobProOnly").checked,
+          preproc_max_dimension:
+            parseInt(document.getElementById("jobPreprocMaxDim").value) || 2500,
+          debug_artifacts: document.getElementById("jobDebugArtifacts").checked,
+          capture_video: document.getElementById("jobCaptureVideo").checked,
+        };
+
+        showToast("info", "Uruchamianie...", "Uruchamianie joba OCR");
+        closeStartJobModal();
+
+        try {
+          const response = await fetch("/api/jobs/start", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(jobParams),
+          });
+
+          if (response.ok) {
+            showToast("success", "Uruchomiono", "Job OCR został uruchomiony");
+            refreshData();
+          } else {
+            const data = await response.json();
+            showToast(
+              "error",
+              "Błąd",
+              data.detail || "Nie udało się uruchomić joba",
+            );
+          }
+        } catch (e) {
+          showToast("error", "Błąd", e.message);
+        }
+      }
+
+      // ============================================
+      // Job Config Tab Functions
+      // ============================================
+
+      function switchConfigTab(tabName) {
+        // Update URL hash to include subtab
+        // Format: #jobconfig/subtab
+        const hashParts = window.location.hash.slice(1).split("/");
+        const mainTab = hashParts[0] || "jobconfig";
+        if (mainTab === "jobconfig") {
+          const newHash = `${mainTab}/${tabName}`;
+          if (window.location.hash.slice(1) !== newHash) {
+            window.location.hash = newHash;
+            // Hash change will finalize if needed, but we update UI strictly here for speed
+          }
+        }
+
+        // Remove active class from all tabs and panels
+        document
+          .querySelectorAll(".config-tab")
+          .forEach((tab) => tab.classList.remove("active"));
+        document
+          .querySelectorAll(".config-panel")
+          .forEach((panel) => panel.classList.remove("active"));
+
+        // Add active class to selected tab and panel
+        const selectedTab = document.querySelector(
+          `.config-tab[data-config-tab="${tabName}"]`,
+        );
+        const selectedPanel = document.getElementById(`config-${tabName}`);
+
+        if (selectedTab) selectedTab.classList.add("active");
+        if (selectedPanel) selectedPanel.classList.add("active");
+
+        updateBreadcrumb("jobconfig", tabName);
+      }
+
+      async function startJobFromConfig() {
+        const sourcePath = document.getElementById("jobSourcePath").value;
+        if (!sourcePath) {
+          showToast("error", "Błąd", "Podaj ścieżkę źródłową");
+          return;
+        }
+
+        const selectedProfiles = [
+          ...document.querySelectorAll(".job-profile-cb:checked"),
+        ].map((cb) => cb.value);
+        if (selectedProfiles.length === 0) {
+          showToast("error", "Błąd", "Wybierz przynajmniej jeden profil");
+          return;
+        }
+
+        localStorage.setItem("lastSourcePath", sourcePath);
+
+        // Split profiles by execution mode
+        const profilesByMode = {
+          profiles: [],
+          remote_browser_profiles: [],
+          remote_ssh_profiles: [],
+          remote_desktop_profiles: [],
+          remote_desktop_browser_profiles: [],
+        };
+
+        selectedProfiles.forEach((profileName) => {
+          const mode = getExecutionMode(profileName);
+          switch (mode) {
+            case "local":
+              profilesByMode.profiles.push(profileName);
+              break;
+            case "wsl_browser":
+              profilesByMode.remote_browser_profiles.push(profileName);
+              break;
+            case "wsl_worker":
+              profilesByMode.remote_ssh_profiles.push(profileName);
+              break;
+            case "desktop_browser":
+              profilesByMode.remote_desktop_browser_profiles.push(profileName);
+              break;
+            case "desktop_worker":
+              profilesByMode.remote_desktop_profiles.push(profileName);
+              break;
+          }
+        });
+
+        // Collect all job parameters from the form
+        const jobParams = {
+          source_dir: sourcePath,
+          batch_id: document.getElementById("jobBatchId").value || null,
+          ...profilesByMode,
+
+          // Basic
+          headed: document.getElementById("jobHeadedMode").checked,
+          engine: document.getElementById("jobEngine").value,
+
+          // Performance
+          workers: parseInt(document.getElementById("jobWorkers").value) || 2,
+          scans_per_worker:
+            parseInt(document.getElementById("jobScansPerWorker").value) || 2,
+          collect_timeout_sec:
+            parseInt(document.getElementById("jobCollectTimeout").value) || 400,
+          close_idle_tabs: document.getElementById("jobCloseIdleTabs").checked,
+          max_tabs_per_context:
+            parseInt(document.getElementById("jobMaxTabsPerContext").value) ||
+            0,
+          isolated_contexts: document.getElementById("jobIsolatedContexts")
+            .checked,
+          context_pool_size:
+            parseInt(document.getElementById("jobContextPoolSize").value) || 0,
+          viewport_width:
+            parseInt(document.getElementById("jobViewportWidth").value) || 1200,
+          viewport_height:
+            parseInt(document.getElementById("jobViewportHeight").value) || 800,
+          reduced_motion: document.getElementById("jobReducedMotion").checked,
+
+          // Database
+          pg_enabled: document.getElementById("jobPgEnabled").checked,
+          pg_dsn: document.getElementById("jobPgDsn").value || null,
+          pg_table:
+            document.getElementById("jobPgTable").value ||
+            "public.ocr_raw_texts",
+
+          // Preprocess
+          preproc_max_dimension:
+            parseInt(document.getElementById("jobPreprocMaxDim").value) || 2500,
+          preproc_median_kernel:
+            parseInt(document.getElementById("jobPreprocMedianKernel").value) ||
+            3,
+          preproc_denoise:
+            parseInt(document.getElementById("jobPreprocDenoise").value) || 8,
+          preproc_morph:
+            parseInt(document.getElementById("jobPreprocMorph").value) || 2,
+          preproc_clahe:
+            parseFloat(document.getElementById("jobPreprocClahe").value) || 2.0,
+          preproc_clahe_grid:
+            document.getElementById("jobPreprocClaheGrid").value || "8,8",
+          preproc_local_sigma:
+            parseFloat(document.getElementById("jobPreprocLocalSigma").value) ||
+            12.0,
+          preproc_local_amount:
+            parseFloat(
+              document.getElementById("jobPreprocLocalAmount").value,
+            ) || 0.35,
+          preproc_blackhat_kernel:
+            parseInt(
+              document.getElementById("jobPreprocBlackhatKernel").value,
+            ) || 5,
+          preproc_blackhat_strength:
+            parseFloat(
+              document.getElementById("jobPreprocBlackhatStrength").value,
+            ) || 0.45,
+          preproc_unsharp_amount:
+            parseFloat(
+              document.getElementById("jobPreprocUnsharpAmount").value,
+            ) || 1.2,
+          preproc_unsharp_radius:
+            parseInt(
+              document.getElementById("jobPreprocUnsharpRadius").value,
+            ) || 1,
+          preproc_margin_percent:
+            parseFloat(
+              document.getElementById("jobPreprocMarginPercent").value,
+            ) || 0.05,
+          preproc_dark_threshold:
+            parseInt(
+              document.getElementById("jobPreprocDarkThreshold").value,
+            ) || 60,
+          preproc_margin_ink_ratio:
+            parseFloat(
+              document.getElementById("jobPreprocMarginInkRatio").value,
+            ) || 0.01,
+          preproc_margin_shadow:
+            parseInt(document.getElementById("jobPreprocMarginShadow").value) ||
+            200,
+          preproc_bg_kernel_ratio:
+            parseFloat(
+              document.getElementById("jobPreprocBgKernelRatio").value,
+            ) || 0.025,
+          preproc_bg_kernel_min:
+            parseInt(document.getElementById("jobPreprocBgKernelMin").value) ||
+            31,
+          preproc_binarization: document.getElementById(
+            "jobPreprocBinarization",
+          ).checked,
+          preproc_sauvola_w:
+            parseInt(document.getElementById("jobPreprocSauvolaW").value) || 31,
+          preproc_sauvola_k:
+            parseFloat(document.getElementById("jobPreprocSauvolaK").value) ||
+            0.2,
+          preproc_sauvola_r:
+            parseFloat(document.getElementById("jobPreprocSauvolaR").value) ||
+            128.0,
+          preproc_text_mask_block:
+            parseInt(
+              document.getElementById("jobPreprocTextMaskBlock").value,
+            ) || 31,
+          preproc_text_mask_c:
+            parseInt(document.getElementById("jobPreprocTextMaskC").value) ||
+            12,
+          preproc_text_mask_open_k:
+            parseInt(
+              document.getElementById("jobPreprocTextMaskOpenK").value,
+            ) || 3,
+          preproc_text_mask_close_k:
+            parseInt(
+              document.getElementById("jobPreprocTextMaskCloseK").value,
+            ) || 9,
+          preproc_text_mask_close_i:
+            parseInt(
+              document.getElementById("jobPreprocTextMaskCloseI").value,
+            ) || 2,
+          preproc_text_mask_dilate_i:
+            parseInt(
+              document.getElementById("jobPreprocTextMaskDilateI").value,
+            ) || 1,
+          preproc_text_mask_min_area:
+            parseFloat(
+              document.getElementById("jobPreprocTextMaskMinArea").value,
+            ) || 0.0005,
+          preproc_trim_band:
+            parseFloat(document.getElementById("jobPreprocTrimBand").value) ||
+            0.02,
+          preproc_trim_ink:
+            parseFloat(document.getElementById("jobPreprocTrimInk").value) ||
+            0.02,
+          preproc_trim_max:
+            parseFloat(document.getElementById("jobPreprocTrimMax").value) ||
+            0.15,
+          preproc_trim_min_dim:
+            parseInt(document.getElementById("jobPreprocTrimMinDim").value) ||
+            200,
+
+          // Advanced
+          continue_mode: document.getElementById("jobContinueMode").checked,
+          pro_only: document.getElementById("jobProOnly").checked,
+          clean_temp: document.getElementById("jobCleanTemp").checked,
+          debug_artifacts: document.getElementById("jobDebugArtifacts").checked,
+          capture_video: document.getElementById("jobCaptureVideo").checked,
+          tracing_mode: document.getElementById("jobTracingMode").value,
+          auth_ensure: document.getElementById("jobAuthEnsure").checked,
+          auth_ensure_interval:
+            parseInt(document.getElementById("jobAuthEnsureInterval").value) ||
+            900,
+          model_switch_retries:
+            parseInt(document.getElementById("jobModelSwitchRetries").value) ||
+            3,
+          model_switch_cooldown:
+            parseInt(document.getElementById("jobModelSwitchCooldown").value) ||
+            1200,
+          limit_check_interval:
+            parseInt(document.getElementById("jobLimitCheckInterval").value) ||
+            1800,
+          pro_pause_buffer:
+            parseInt(document.getElementById("jobProPauseBuffer").value) || 180,
+          pro_fallback_pause:
+            parseInt(document.getElementById("jobProFallbackPause").value) ||
+            60,
+          browser_id: document.getElementById("jobBrowserId").value || null,
+        };
+
+        showToast("info", "Uruchamianie...", "Uruchamianie joba OCR");
+
+        try {
+          const response = await fetch("/api/jobs/start", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(jobParams),
+          });
+
+          if (response.ok) {
+            showToast("success", "Uruchomiono", "Job OCR został uruchomiony");
+            refreshData();
+          } else {
+            const data = await response.json();
+            showToast(
+              "error",
+              "Błąd",
+              data.detail || "Nie udało się uruchomić joba",
+            );
+          }
+        } catch (e) {
+          showToast("error", "Błąd", e.message);
+        }
+      }
+
+      function saveJobConfig() {
+        const config = {
+          sourcePath: document.getElementById("jobSourcePath").value,
+          batchId: document.getElementById("jobBatchId").value,
+          headedMode: document.getElementById("jobHeadedMode").checked,
+          engine: document.getElementById("jobEngine").value,
+          workers: document.getElementById("jobWorkers").value,
+          scansPerWorker: document.getElementById("jobScansPerWorker").value,
+          collectTimeout: document.getElementById("jobCollectTimeout").value,
+          closeIdleTabs: document.getElementById("jobCloseIdleTabs").checked,
+          maxTabsPerContext: document.getElementById("jobMaxTabsPerContext")
+            .value,
+          isolatedContexts: document.getElementById("jobIsolatedContexts")
+            .checked,
+          contextPoolSize: document.getElementById("jobContextPoolSize").value,
+          viewportWidth: document.getElementById("jobViewportWidth").value,
+          viewportHeight: document.getElementById("jobViewportHeight").value,
+          reducedMotion: document.getElementById("jobReducedMotion").checked,
+          pgEnabled: document.getElementById("jobPgEnabled").checked,
+          pgDsn: document.getElementById("jobPgDsn").value,
+          pgTable: document.getElementById("jobPgTable").value,
+          preprocMaxDim: document.getElementById("jobPreprocMaxDim").value,
+          preprocMedianKernel: document.getElementById("jobPreprocMedianKernel")
+            .value,
+          preprocDenoise: document.getElementById("jobPreprocDenoise").value,
+          preprocMorph: document.getElementById("jobPreprocMorph").value,
+          preprocClahe: document.getElementById("jobPreprocClahe").value,
+          preprocClaheGrid: document.getElementById("jobPreprocClaheGrid")
+            .value,
+          preprocLocalSigma: document.getElementById("jobPreprocLocalSigma")
+            .value,
+          preprocLocalAmount: document.getElementById("jobPreprocLocalAmount")
+            .value,
+          preprocBlackhatKernel: document.getElementById(
+            "jobPreprocBlackhatKernel",
+          ).value,
+          preprocBlackhatStrength: document.getElementById(
+            "jobPreprocBlackhatStrength",
+          ).value,
+          preprocUnsharpAmount: document.getElementById(
+            "jobPreprocUnsharpAmount",
+          ).value,
+          preprocUnsharpRadius: document.getElementById(
+            "jobPreprocUnsharpRadius",
+          ).value,
+          preprocMarginPercent: document.getElementById(
+            "jobPreprocMarginPercent",
+          ).value,
+          preprocDarkThreshold: document.getElementById(
+            "jobPreprocDarkThreshold",
+          ).value,
+          preprocMarginInkRatio: document.getElementById(
+            "jobPreprocMarginInkRatio",
+          ).value,
+          preprocMarginShadow: document.getElementById("jobPreprocMarginShadow")
+            .value,
+          preprocBgKernelRatio: document.getElementById(
+            "jobPreprocBgKernelRatio",
+          ).value,
+          preprocBgKernelMin: document.getElementById("jobPreprocBgKernelMin")
+            .value,
+          preprocBinarization: document.getElementById("jobPreprocBinarization")
+            .checked,
+          preprocSauvolaW: document.getElementById("jobPreprocSauvolaW").value,
+          preprocSauvolaK: document.getElementById("jobPreprocSauvolaK").value,
+          preprocSauvolaR: document.getElementById("jobPreprocSauvolaR").value,
+          preprocTextMaskBlock: document.getElementById(
+            "jobPreprocTextMaskBlock",
+          ).value,
+          preprocTextMaskC: document.getElementById("jobPreprocTextMaskC")
+            .value,
+          preprocTextMaskOpenK: document.getElementById(
+            "jobPreprocTextMaskOpenK",
+          ).value,
+          preprocTextMaskCloseK: document.getElementById(
+            "jobPreprocTextMaskCloseK",
+          ).value,
+          preprocTextMaskCloseI: document.getElementById(
+            "jobPreprocTextMaskCloseI",
+          ).value,
+          preprocTextMaskDilateI: document.getElementById(
+            "jobPreprocTextMaskDilateI",
+          ).value,
+          preprocTextMaskMinArea: document.getElementById(
+            "jobPreprocTextMaskMinArea",
+          ).value,
+          preprocTrimBand: document.getElementById("jobPreprocTrimBand").value,
+          preprocTrimInk: document.getElementById("jobPreprocTrimInk").value,
+          preprocTrimMax: document.getElementById("jobPreprocTrimMax").value,
+          preprocTrimMinDim: document.getElementById("jobPreprocTrimMinDim")
+            .value,
+          continueMode: document.getElementById("jobContinueMode").checked,
+          proOnly: document.getElementById("jobProOnly").checked,
+          cleanTemp: document.getElementById("jobCleanTemp").checked,
+          debugArtifacts: document.getElementById("jobDebugArtifacts").checked,
+          captureVideo: document.getElementById("jobCaptureVideo").checked,
+          tracingMode: document.getElementById("jobTracingMode").value,
+          authEnsure: document.getElementById("jobAuthEnsure").checked,
+          authEnsureInterval: document.getElementById("jobAuthEnsureInterval")
+            .value,
+          modelSwitchRetries: document.getElementById("jobModelSwitchRetries")
+            .value,
+          modelSwitchCooldown: document.getElementById("jobModelSwitchCooldown")
+            .value,
+          limitCheckInterval: document.getElementById("jobLimitCheckInterval")
+            .value,
+          proPauseBuffer: document.getElementById("jobProPauseBuffer").value,
+          proFallbackPause: document.getElementById("jobProFallbackPause")
+            .value,
+          browserId: document.getElementById("jobBrowserId").value,
+        };
+
+        localStorage.setItem("jobConfig", JSON.stringify(config));
+        showToast("success", "Zapisano", "Konfiguracja została zapisana");
+      }
+
+      function loadJobConfig() {
+        const savedConfig = localStorage.getItem("jobConfig");
+        if (!savedConfig) {
+          showToast(
+            "info",
+            "Brak konfiguracji",
+            "Nie znaleziono zapisanej konfiguracji",
+          );
+          return;
+        }
+
+        try {
+          const config = JSON.parse(savedConfig);
+
+          // Basic
+          if (config.sourcePath)
+            document.getElementById("jobSourcePath").value = config.sourcePath;
+          if (config.batchId)
+            document.getElementById("jobBatchId").value = config.batchId;
+          if (config.headedMode !== undefined)
+            document.getElementById("jobHeadedMode").checked =
+              config.headedMode;
+          if (config.engine)
+            document.getElementById("jobEngine").value = config.engine;
+
+          // Performance
+          if (config.workers)
+            document.getElementById("jobWorkers").value = config.workers;
+          if (config.scansPerWorker)
+            document.getElementById("jobScansPerWorker").value =
+              config.scansPerWorker;
+          if (config.collectTimeout)
+            document.getElementById("jobCollectTimeout").value =
+              config.collectTimeout;
+          if (config.closeIdleTabs !== undefined)
+            document.getElementById("jobCloseIdleTabs").checked =
+              config.closeIdleTabs;
+          if (config.maxTabsPerContext)
+            document.getElementById("jobMaxTabsPerContext").value =
+              config.maxTabsPerContext;
+          if (config.isolatedContexts !== undefined)
+            document.getElementById("jobIsolatedContexts").checked =
+              config.isolatedContexts;
+          if (config.contextPoolSize)
+            document.getElementById("jobContextPoolSize").value =
+              config.contextPoolSize;
+          if (config.viewportWidth)
+            document.getElementById("jobViewportWidth").value =
+              config.viewportWidth;
+          if (config.viewportHeight)
+            document.getElementById("jobViewportHeight").value =
+              config.viewportHeight;
+          if (config.reducedMotion !== undefined)
+            document.getElementById("jobReducedMotion").checked =
+              config.reducedMotion;
+
+          // Database
+          if (config.pgEnabled !== undefined)
+            document.getElementById("jobPgEnabled").checked = config.pgEnabled;
+          if (config.pgDsn)
+            document.getElementById("jobPgDsn").value = config.pgDsn;
+          if (config.pgTable)
+            document.getElementById("jobPgTable").value = config.pgTable;
+
+          // Preprocess
+          if (config.preprocMaxDim)
+            document.getElementById("jobPreprocMaxDim").value =
+              config.preprocMaxDim;
+          if (config.preprocMedianKernel)
+            document.getElementById("jobPreprocMedianKernel").value =
+              config.preprocMedianKernel;
+          if (config.preprocDenoise)
+            document.getElementById("jobPreprocDenoise").value =
+              config.preprocDenoise;
+          if (config.preprocMorph)
+            document.getElementById("jobPreprocMorph").value =
+              config.preprocMorph;
+          if (config.preprocClahe)
+            document.getElementById("jobPreprocClahe").value =
+              config.preprocClahe;
+          if (config.preprocClaheGrid)
+            document.getElementById("jobPreprocClaheGrid").value =
+              config.preprocClaheGrid;
+          if (config.preprocLocalSigma)
+            document.getElementById("jobPreprocLocalSigma").value =
+              config.preprocLocalSigma;
+          if (config.preprocLocalAmount)
+            document.getElementById("jobPreprocLocalAmount").value =
+              config.preprocLocalAmount;
+          if (config.preprocBlackhatKernel)
+            document.getElementById("jobPreprocBlackhatKernel").value =
+              config.preprocBlackhatKernel;
+          if (config.preprocBlackhatStrength)
+            document.getElementById("jobPreprocBlackhatStrength").value =
+              config.preprocBlackhatStrength;
+          if (config.preprocUnsharpAmount)
+            document.getElementById("jobPreprocUnsharpAmount").value =
+              config.preprocUnsharpAmount;
+          if (config.preprocUnsharpRadius)
+            document.getElementById("jobPreprocUnsharpRadius").value =
+              config.preprocUnsharpRadius;
+          if (config.preprocMarginPercent)
+            document.getElementById("jobPreprocMarginPercent").value =
+              config.preprocMarginPercent;
+          if (config.preprocDarkThreshold)
+            document.getElementById("jobPreprocDarkThreshold").value =
+              config.preprocDarkThreshold;
+          if (config.preprocMarginInkRatio)
+            document.getElementById("jobPreprocMarginInkRatio").value =
+              config.preprocMarginInkRatio;
+          if (config.preprocMarginShadow)
+            document.getElementById("jobPreprocMarginShadow").value =
+              config.preprocMarginShadow;
+          if (config.preprocBgKernelRatio)
+            document.getElementById("jobPreprocBgKernelRatio").value =
+              config.preprocBgKernelRatio;
+          if (config.preprocBgKernelMin)
+            document.getElementById("jobPreprocBgKernelMin").value =
+              config.preprocBgKernelMin;
+          if (config.preprocBinarization !== undefined)
+            document.getElementById("jobPreprocBinarization").checked =
+              config.preprocBinarization;
+          if (config.preprocSauvolaW)
+            document.getElementById("jobPreprocSauvolaW").value =
+              config.preprocSauvolaW;
+          if (config.preprocSauvolaK)
+            document.getElementById("jobPreprocSauvolaK").value =
+              config.preprocSauvolaK;
+          if (config.preprocSauvolaR)
+            document.getElementById("jobPreprocSauvolaR").value =
+              config.preprocSauvolaR;
+          if (config.preprocTextMaskBlock)
+            document.getElementById("jobPreprocTextMaskBlock").value =
+              config.preprocTextMaskBlock;
+          if (config.preprocTextMaskC)
+            document.getElementById("jobPreprocTextMaskC").value =
+              config.preprocTextMaskC;
+          if (config.preprocTextMaskOpenK)
+            document.getElementById("jobPreprocTextMaskOpenK").value =
+              config.preprocTextMaskOpenK;
+          if (config.preprocTextMaskCloseK)
+            document.getElementById("jobPreprocTextMaskCloseK").value =
+              config.preprocTextMaskCloseK;
+          if (config.preprocTextMaskCloseI)
+            document.getElementById("jobPreprocTextMaskCloseI").value =
+              config.preprocTextMaskCloseI;
+          if (config.preprocTextMaskDilateI)
+            document.getElementById("jobPreprocTextMaskDilateI").value =
+              config.preprocTextMaskDilateI;
+          if (config.preprocTextMaskMinArea)
+            document.getElementById("jobPreprocTextMaskMinArea").value =
+              config.preprocTextMaskMinArea;
+          if (config.preprocTrimBand)
+            document.getElementById("jobPreprocTrimBand").value =
+              config.preprocTrimBand;
+          if (config.preprocTrimInk)
+            document.getElementById("jobPreprocTrimInk").value =
+              config.preprocTrimInk;
+          if (config.preprocTrimMax)
+            document.getElementById("jobPreprocTrimMax").value =
+              config.preprocTrimMax;
+          if (config.preprocTrimMinDim)
+            document.getElementById("jobPreprocTrimMinDim").value =
+              config.preprocTrimMinDim;
+
+          // Advanced
+          if (config.continueMode !== undefined)
+            document.getElementById("jobContinueMode").checked =
+              config.continueMode;
+          if (config.proOnly !== undefined)
+            document.getElementById("jobProOnly").checked = config.proOnly;
+          if (config.cleanTemp !== undefined)
+            document.getElementById("jobCleanTemp").checked = config.cleanTemp;
+          if (config.debugArtifacts !== undefined)
+            document.getElementById("jobDebugArtifacts").checked =
+              config.debugArtifacts;
+          if (config.captureVideo !== undefined)
+            document.getElementById("jobCaptureVideo").checked =
+              config.captureVideo;
+          if (config.tracingMode)
+            document.getElementById("jobTracingMode").value =
+              config.tracingMode;
+          if (config.authEnsure !== undefined)
+            document.getElementById("jobAuthEnsure").checked =
+              config.authEnsure;
+          if (config.authEnsureInterval)
+            document.getElementById("jobAuthEnsureInterval").value =
+              config.authEnsureInterval;
+          if (config.modelSwitchRetries)
+            document.getElementById("jobModelSwitchRetries").value =
+              config.modelSwitchRetries;
+          if (config.modelSwitchCooldown)
+            document.getElementById("jobModelSwitchCooldown").value =
+              config.modelSwitchCooldown;
+          if (config.limitCheckInterval)
+            document.getElementById("jobLimitCheckInterval").value =
+              config.limitCheckInterval;
+          if (config.proPauseBuffer)
+            document.getElementById("jobProPauseBuffer").value =
+              config.proPauseBuffer;
+          if (config.proFallbackPause)
+            document.getElementById("jobProFallbackPause").value =
+              config.proFallbackPause;
+          if (config.browserId)
+            document.getElementById("jobBrowserId").value = config.browserId;
+
+          showToast("success", "Wczytano", "Konfiguracja została wczytana");
+        } catch (e) {
+          showToast("error", "Błąd", "Nie udało się wczytać konfiguracji");
+        }
+      }
+
+      // ============================================
+      // File Browser
       // ============================================
 
 
+      // ============================================
+      // Start Job Modal (Recovered)
+      // ============================================
+
+        function openStartJobModal() {
+            document.getElementById('startJobModal').classList.add('visible');
+            // Load saved source path if available
+            const savedPath = localStorage.getItem('lastSourcePath');
+            if (savedPath) {
+                document.getElementById('jobSourcePath').value = savedPath;
+            }
+        }
+
+        function closeStartJobModal() {
+            document.getElementById('startJobModal').classList.remove('visible');
+        }
 
         // Removed duplicate switchConfigTab function
 
@@ -4543,104 +5348,6 @@
 
         function clearJobProfiles() {
             document.querySelectorAll('.job-profile-cb').forEach(cb => cb.checked = false);
-        }
-
-        const DEFAULT_JOB_CONFIG = {
-            // Basic
-            // sourcePath: "", // Don't reset source path as it might be from DB
-            headed: false,
-            engine: "auto",
-            
-            // Performance
-            workers: 2,
-            scansPerWorker: 2,
-            collectTimeout: 400,
-            closeIdleTabs: true,
-            maxTabsPerContext: 0,
-            isolatedContexts: false,
-            contextPoolSize: 0,
-            viewportWidth: 1200,
-            viewportHeight: 800,
-            reducedMotion: true,
-
-            // Database
-            pgEnabled: true,
-            pgDsn: "postgresql://tomaasz:123Karinka!%40%23@127.0.0.1:5432/ocr",
-            pgTable: "public.ocr_raw_texts",
-
-            // Preprocess
-            preprocMaxDim: 2500,
-            preprocMedianKernel: 3,
-            preprocDenoise: 8,
-            preprocMorph: 2,
-            preprocClahe: 2.0,
-            preprocClaheGrid: "8,8",
-            preprocLocalSigma: 12.0,
-            preprocLocalAmount: 0.35,
-
-            // Advanced
-            continueMode: true,
-            proOnly: true,
-            cleanTmp: true,
-            debugArtifacts: false,
-            captureVideo: false
-        };
-
-        function resetJobConfig() {
-            document.getElementById('resetConfigModal').classList.add('visible');
-        }
-
-        function closeResetConfigModal() {
-            document.getElementById('resetConfigModal').classList.remove('visible');
-        }
-
-        function confirmResetJobConfig() {
-            closeResetConfigModal();
-            
-            // Reset Source Path
-            localStorage.removeItem('lastSourcePath');
-            document.getElementById('jobSourcePath').value = '';
-            loadDefaultSourcePath();
-
-            // Basic
-            document.getElementById('jobHeadedMode').checked = DEFAULT_JOB_CONFIG.headed;
-            document.getElementById('jobEngine').value = DEFAULT_JOB_CONFIG.engine;
-
-            // Performance
-            document.getElementById('jobWorkers').value = DEFAULT_JOB_CONFIG.workers;
-            document.getElementById('jobScansPerWorker').value = DEFAULT_JOB_CONFIG.scansPerWorker;
-            document.getElementById('jobCollectTimeout').value = DEFAULT_JOB_CONFIG.collectTimeout;
-            document.getElementById('jobCloseIdleTabs').checked = DEFAULT_JOB_CONFIG.closeIdleTabs;
-            document.getElementById('jobMaxTabsPerContext').value = DEFAULT_JOB_CONFIG.maxTabsPerContext;
-            document.getElementById('jobIsolatedContexts').checked = DEFAULT_JOB_CONFIG.isolatedContexts;
-            document.getElementById('jobContextPoolSize').value = DEFAULT_JOB_CONFIG.contextPoolSize;
-            document.getElementById('jobViewportWidth').value = DEFAULT_JOB_CONFIG.viewportWidth;
-            document.getElementById('jobViewportHeight').value = DEFAULT_JOB_CONFIG.viewportHeight;
-            document.getElementById('jobReducedMotion').checked = DEFAULT_JOB_CONFIG.reducedMotion;
-
-            // Database
-            document.getElementById('jobPgEnabled').checked = DEFAULT_JOB_CONFIG.pgEnabled;
-            document.getElementById('jobPgDsn').value = DEFAULT_JOB_CONFIG.pgDsn;
-            document.getElementById('jobPgTable').value = DEFAULT_JOB_CONFIG.pgTable;
-
-            // Preprocess
-            document.getElementById('jobPreprocMaxDim').value = DEFAULT_JOB_CONFIG.preprocMaxDim;
-            document.getElementById('jobPreprocMedianKernel').value = DEFAULT_JOB_CONFIG.preprocMedianKernel;
-            document.getElementById('jobPreprocDenoise').value = DEFAULT_JOB_CONFIG.preprocDenoise;
-            document.getElementById('jobPreprocMorph').value = DEFAULT_JOB_CONFIG.preprocMorph;
-            document.getElementById('jobPreprocClahe').value = DEFAULT_JOB_CONFIG.preprocClahe;
-            document.getElementById('jobPreprocClaheGrid').value = DEFAULT_JOB_CONFIG.preprocClaheGrid;
-            document.getElementById('jobPreprocLocalSigma').value = DEFAULT_JOB_CONFIG.preprocLocalSigma;
-            document.getElementById('jobPreprocLocalAmount').value = DEFAULT_JOB_CONFIG.preprocLocalAmount;
-
-            // Advanced
-            document.getElementById('jobContinueMode').checked = DEFAULT_JOB_CONFIG.continueMode;
-            document.getElementById('jobProOnly').checked = DEFAULT_JOB_CONFIG.proOnly;
-            document.getElementById('jobCleanTmp').checked = DEFAULT_JOB_CONFIG.cleanTmp;
-            document.getElementById('jobDebugArtifacts').checked = DEFAULT_JOB_CONFIG.debugArtifacts;
-            document.getElementById('jobCaptureVideo').checked = DEFAULT_JOB_CONFIG.captureVideo;
-
-            showToast('info', 'Zresetowano', 'Przywrócono domyślne ustawienia konfiguracji.');
         }
 
         async function startJob() {
@@ -4691,51 +5398,20 @@
             const jobParams = {
                 source_dir: sourcePath,
                 batch_id: document.getElementById('jobBatchId').value || null,
+                ...profilesByMode,
                 headed: document.getElementById('jobHeadedMode').checked,
-                engine: document.getElementById('jobEngine').value,
-                
-                // Performance
-                num_workers: parseInt(document.getElementById('jobWorkers').value) || 2,
+                workers: parseInt(document.getElementById('jobWorkers').value) || 2,
                 scans_per_worker: parseInt(document.getElementById('jobScansPerWorker').value) || 2,
-                collect_timeout: parseInt(document.getElementById('jobCollectTimeout').value) || 400,
-                close_idle_tabs: document.getElementById('jobCloseIdleTabs').checked,
-                max_tabs_per_context: parseInt(document.getElementById('jobMaxTabsPerContext').value) || 0,
-                isolated_contexts: document.getElementById('jobIsolatedContexts').checked,
-                context_pool_size: parseInt(document.getElementById('jobContextPoolSize').value) || 0,
-                viewport_width: parseInt(document.getElementById('jobViewportWidth').value) || 1200,
-                viewport_height: parseInt(document.getElementById('jobViewportHeight').value) || 800,
-                reduced_motion: document.getElementById('jobReducedMotion').checked,
-
-                // Database
+                collect_timeout_sec: parseInt(document.getElementById('jobCollectTimeout').value) || 400,
                 pg_enabled: document.getElementById('jobPgEnabled').checked,
-                pg_dsn: document.getElementById('jobPgDsn').value,
-                pg_table: document.getElementById('jobPgTable').value,
-
-                // Preprocess
-                preproc_max_dim: parseInt(document.getElementById('jobPreprocMaxDim').value) || 2500,
-                preproc_median_kernel: parseInt(document.getElementById('jobPreprocMedianKernel').value) || 3,
-                preproc_denoise: parseInt(document.getElementById('jobPreprocDenoise').value) || 8,
-                preproc_morph_kernel: parseInt(document.getElementById('jobPreprocMorph').value) || 2,
-                preproc_clahe_clip: parseFloat(document.getElementById('jobPreprocClahe').value) || 2.0,
-                preproc_clahe_grid: document.getElementById('jobPreprocClaheGrid').value || "8,8",
-                preproc_local_sigma: parseFloat(document.getElementById('jobPreprocLocalSigma').value) || 12.0,
-                preproc_local_amount: parseFloat(document.getElementById('jobPreprocLocalAmount').value) || 0.35,
-
-                // Advanced
+                pg_dsn: document.getElementById('jobPgDsn').value || null,
+                pg_table: document.getElementById('jobPgTable').value || 'public.ocr_raw_texts',
                 continue_mode: document.getElementById('jobContinueMode').checked,
                 pro_only: document.getElementById('jobProOnly').checked,
-                clean_tmp: document.getElementById('jobCleanTmp').checked,
+                preproc_max_dimension: parseInt(document.getElementById('jobPreprocMaxDim').value) || 2500,
                 debug_artifacts: document.getElementById('jobDebugArtifacts').checked,
                 capture_video: document.getElementById('jobCaptureVideo').checked,
-
-                // Profiles
-                profiles: profilesByMode.profiles,
-                remote_browser_profiles: profilesByMode.remote_browser_profiles,
-                remote_ssh_profiles: profilesByMode.remote_ssh_profiles,
-                remote_desktop_profiles: profilesByMode.remote_desktop_profiles,
-                remote_desktop_browser_profiles: profilesByMode.remote_desktop_browser_profiles
             };
-
 
             showToast('info', 'Uruchamianie...', 'Uruchamianie joba OCR');
             closeStartJobModal();
@@ -5007,77 +5683,6 @@
             showToast('success', 'Zapisano', 'Konfiguracja została zapisana');
         }
 
-
-        // ============================================
-        // Navigation and Core UI Functions
-        // ============================================
-
-        function showTab(tabName) {
-            // Hide all tabs
-            document.querySelectorAll('.tab-content').forEach(tab => {
-                tab.classList.remove('active');
-            });
-
-            // Remove active class from all nav items
-            document.querySelectorAll('.nav-item').forEach(item => {
-                item.classList.remove('active');
-            });
-
-            // Show selected tab
-            const selectedTab = document.getElementById(`tab-${tabName}`);
-            if (selectedTab) {
-                selectedTab.classList.add('active');
-            }
-
-            // Highlight selected nav item
-            const selectedNav = document.querySelector(`.nav-item[onclick*="${tabName}"]`);
-            if (selectedNav) {
-                selectedNav.classList.add('active');
-            }
-
-            // Update URL hash
-            window.location.hash = tabName;
-
-            // If jobconfig tab, restore subtab from hash
-            if (tabName === 'jobconfig') {
-                const hashParts = window.location.hash.slice(1).split('/');
-                const subtab = hashParts[1] || 'basic';
-                setTimeout(() => switchConfigTab(subtab), 50);
-            }
-        }
-
-        async function stopAllJobs() {
-            if (!confirm(t('jobs.confirmStopAll') || 'Czy na pewno chcesz zatrzymać wszystkie joby?')) {
-                return;
-            }
-
-            try {
-                const response = await fetch('/api/jobs/stop-all', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-
-                if (response.ok) {
-                    showToast('success', t('jobs.stopped') || 'Zatrzymano', t('jobs.allStopped') || 'Wszystkie joby zostały zatrzymane');
-                    refreshData();
-                } else {
-                    const data = await response.json();
-                    showToast('error', t('common.error') || 'Błąd', data.detail || t('jobs.stopFailed') || 'Nie udało się zatrzymać jobów');
-                }
-            } catch (e) {
-                showToast('error', t('common.error') || 'Błąd', e.message);
-            }
-        }
-
-        function cleanupFolders() {
-            const modal = document.getElementById('cleanupModal');
-            if (modal) {
-                modal.style.display = 'flex';
-            }
-        }
-
-
-
         function loadJobConfig() {
             const savedConfig = localStorage.getItem('jobConfig');
             if (!savedConfig) {
@@ -5286,27 +5891,15 @@
       }
 
       async function loadDefaultSourcePath() {
-        // Priority: LocalStorage > API
-        const savedPath = localStorage.getItem('lastSourcePath');
-        if (savedPath) {
-            const input = document.getElementById("jobSourcePath");
-            if (input) {
-                input.value = savedPath;
-                // If saved, we can skip fetch or fetch as fallback?
-                // Let's optimize and return if we have a value.
-                // But check if it's not empty?
-                if (savedPath.trim() !== '') return;
-            }
-        }
         try {
           const response = await fetch("/api/default-source-path");
           const data = await response.json();
 
-          if (data.path) {
+          if (data.source_path) {
             const input = document.getElementById("jobSourcePath");
             if (input && !input.value) {
               // Only set if empty
-              input.value = data.path;
+              input.value = data.source_path;
             }
           }
         } catch (e) {
@@ -5740,7 +6333,40 @@
         }
       }
 
+      async function createProfile() {
+        const name = document.getElementById("newProfileName").value.trim();
+        if (!name) {
+          showToast("error", "Błąd", "Podaj nazwę profilu");
+          return;
+        }
 
+        try {
+          const response = await fetch("/api/profiles", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: name }),
+          });
+
+          if (response.ok) {
+            showToast(
+              "success",
+              "Utworzono",
+              `Profil ${name} został utworzony`,
+            );
+            document.getElementById("newProfileName").value = "";
+            location.reload();
+          } else {
+            const data = await response.json();
+            showToast(
+              "error",
+              "Błąd",
+              data.detail || "Nie można utworzyć profilu",
+            );
+          }
+        } catch (e) {
+          showToast("error", "Błąd", e.message);
+        }
+      }
 
       async function syncProfiles() {
         showToast("info", "Synchronizacja...", "Synchronizowanie profili");
@@ -5761,7 +6387,102 @@
         }
       }
 
+      async function restartApp() {
+        // Create persistent loading overlay
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(15, 23, 42, 0.95);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          z-index: 10000;
+          backdrop-filter: blur(8px);
+        `;
+        
+        overlay.innerHTML = `
+          <div style="text-align: center; color: #e2e8f0;">
+            <div style="
+              width: 64px;
+              height: 64px;
+              border: 4px solid #334155;
+              border-top-color: #3b82f6;
+              border-radius: 50%;
+              animation: spin 1s linear infinite;
+              margin: 0 auto 24px;
+            "></div>
+            <h2 style="font-size: 24px; font-weight: 600; margin: 0 0 12px 0;">
+              Restartowanie aplikacji...
+            </h2>
+            <p style="font-size: 16px; color: #94a3b8; margin: 0;">
+              Proszę czekać, strona odświeży się automatycznie
+            </p>
+          </div>
+          <style>
+            @keyframes spin {
+              to { transform: rotate(360deg); }
+            }
+          </style>
+        `;
+        
+        document.body.appendChild(overlay);
 
+        try {
+          const response = await fetch("/api/restart", { method: "POST" });
+          if (response.ok) {
+            // Maximum wait time: 30 seconds
+            const maxWaitTime = 30000;
+            const startTime = Date.now();
+            
+            // Wait for restart and reload
+            setTimeout(() => {
+              // Try to reload, if server is down wait and retry
+              const checkAndReload = async () => {
+                // Force reload after timeout
+                if (Date.now() - startTime > maxWaitTime) {
+                  location.reload();
+                  return;
+                }
+                
+                try {
+                  const health = await fetch('/api/health', { 
+                    cache: 'no-cache',
+                    headers: { 'Cache-Control': 'no-cache' }
+                  });
+                  if (health.ok) {
+                    location.reload();
+                  } else {
+                    setTimeout(checkAndReload, 1000);
+                  }
+                } catch {
+                  setTimeout(checkAndReload, 1000);
+                }
+              };
+              setTimeout(checkAndReload, 2000);
+            }, 500);
+          } else {
+            document.body.removeChild(overlay);
+            const data = await response.json().catch(() => ({}));
+            showToast(
+              "error",
+              "Błąd",
+              data.detail || "Nie udało się zrestartować aplikacji",
+            );
+          }
+        } catch (e) {
+          document.body.removeChild(overlay);
+          showToast(
+            "error",
+            "Błąd połączenia",
+            "Nie można połączyć się z serwerem",
+          );
+        }
+      }
 
       // ============================================
       // X11 Display Settings
@@ -5772,10 +6493,7 @@
           const response = await fetch("/api/settings/x11-display");
           if (response.ok) {
             const data = await response.json();
-            const displayInput = document.getElementById("settingDisplay");
-            if (displayInput) {
-              displayInput.value = data.display || "";
-            }
+            document.getElementById("x11Display").value = data.display || "";
           }
         } catch (e) {
           console.error("Failed to load X11 display setting:", e);
@@ -5879,31 +6597,10 @@
 
       function closeLoginLogModal() {
         document.getElementById("loginLogModal").classList.remove("visible");
-        if (loginEventSource) {
-          loginEventSource.close();
-          loginEventSource = null;
+        if (loginLogInterval) {
+          clearInterval(loginLogInterval);
+          loginLogInterval = null;
         }
-      }
-
-      function copyLoginLogs() {
-        const content = document.getElementById("loginLogContent").innerText;
-        const btn = document.getElementById("copyLoginLogsBtn");
-        const originalContent = btn.innerHTML;
-        
-        navigator.clipboard.writeText(content).then(() => {
-            btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Skopiowano!';
-            btn.classList.add('btn-success');
-            btn.classList.remove('btn-primary');
-            
-            setTimeout(() => {
-                btn.innerHTML = originalContent;
-                btn.classList.remove('btn-success');
-                btn.classList.add('btn-primary');
-            }, 2000);
-        }).catch(err => {
-            console.error('Failed to copy logs: ', err);
-            showToast("error", "Błąd", "Nie udało się skopiować logów");
-        });
       }
 
       let profileToDelete = null;
@@ -5973,10 +6670,8 @@
         try {
           const response = await fetch("/api/autorestart");
           const data = await response.json();
-          const autoRestartCheckbox = document.getElementById("settingAutoRestart");
-          if (autoRestartCheckbox) {
-            autoRestartCheckbox.checked = data.enabled || false;
-          }
+          document.getElementById("autoRestartEnabled").checked =
+            data.enabled || false;
         } catch (e) {
           console.error("Failed to load auto-restart state:", e);
         }
@@ -6134,63 +6829,55 @@
         
         document.body.appendChild(overlay);
 
-        // Maximum wait time: 30 seconds
-        const maxWaitTime = 30000;
-        const startTime = Date.now();
-
-        // Start polling immediately (don't block on /api/restart)
-        const checkAndReload = async () => {
-          if (Date.now() - startTime > maxWaitTime) {
-            location.reload();
-            return;
-          }
-
-          try {
-            const health = await fetch('/api/health', { 
-              cache: 'no-cache',
-              headers: { 'Cache-Control': 'no-cache' }
-            });
-            if (health.ok) {
-              location.reload();
-              return;
-            }
-          } catch {
-            // Ignore and retry
-          }
-
-          setTimeout(checkAndReload, 1000);
-        };
-
-        setTimeout(checkAndReload, 2000);
-
-        // Fire restart request with a short timeout to avoid hanging UI
         try {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-          const response = await fetch("/api/restart", { 
-            method: "POST",
-            signal: controller.signal
-          });
-
-          clearTimeout(timeoutId);
-
-          if (!response.ok) {
+          const response = await fetch("/api/restart", { method: "POST" });
+          if (response.ok) {
+            // Maximum wait time: 30 seconds
+            const maxWaitTime = 30000;
+            const startTime = Date.now();
+            
+            // Wait for restart and reload
+            setTimeout(() => {
+              // Try to reload, if server is down wait and retry
+              const checkAndReload = async () => {
+                // Force reload after timeout
+                if (Date.now() - startTime > maxWaitTime) {
+                  location.reload();
+                  return;
+                }
+                
+                try {
+                  const health = await fetch('/api/health', { 
+                    cache: 'no-cache',
+                    headers: { 'Cache-Control': 'no-cache' }
+                  });
+                  if (health.ok) {
+                    location.reload();
+                  } else {
+                    setTimeout(checkAndReload, 1000);
+                  }
+                } catch {
+                  setTimeout(checkAndReload, 1000);
+                }
+              };
+              setTimeout(checkAndReload, 2000);
+            }, 500);
+          } else {
+            document.body.removeChild(overlay);
             const data = await response.json().catch(() => ({}));
             showToast(
-              "warning",
-              "Restart w toku",
-              data.detail || "Nie udało się potwierdzić restartu, czekam na powrót aplikacji",
+              "error",
+              "Błąd",
+              data.detail || "Nie udało się zrestartować aplikacji",
             );
           }
         } catch (e) {
-          if (e.name !== "AbortError") {
-            showToast(
-              "warning",
-              "Restart w toku",
-              "Brak potwierdzenia restartu, czekam na powrót aplikacji",
-            );
-          }
+          document.body.removeChild(overlay);
+          showToast(
+            "error",
+            "Błąd połączenia",
+            "Nie można połączyć się z serwerem",
+          );
         }
       }
 
@@ -6318,13 +7005,6 @@
 
       // Add to DOMContentLoaded
       document.addEventListener("DOMContentLoaded", function () {
-        // [Refactor] Merged initialization logic
-        loadExecutionModes();
-        loadDefaultSourcePath();
-        refreshData();
-        setInterval(refreshData, 1000);
-        toggleAutoRefresh();
-        filterProfiles();
         // Initialize language
         currentLang = localStorage.getItem("ocr-dashboard-lang") || "pl";
         document.documentElement.lang = currentLang;
@@ -6351,30 +7031,6 @@
             }
         `;
       document.head.appendChild(style);
-      function copyFromElement(elementId, btn) {
-        const element = document.getElementById(elementId);
-        if (!element) return;
-        
-        // Use innerText to get newlines correctly, but fallback to textContent
-        const text = element.innerText || element.textContent;
-        const originalContent = btn.innerHTML;
-        const originalClass = btn.className;
-        
-        navigator.clipboard.writeText(text).then(() => {
-            btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Skopiowano!';
-            btn.classList.add('btn-success');
-            // Remove primary/secondary classes temporarily to show success color clearly if needed
-            // But usually adding btn-success is enough if it overrides.
-            
-            setTimeout(() => {
-                btn.innerHTML = originalContent;
-                btn.className = originalClass;
-            }, 2000);
-        }).catch(err => {
-            console.error('Failed to copy: ', err);
-            showToast("error", "Błąd", "Nie udało się skopiować treści");
-        });
-      }
     </script>
   </body>
 </html>

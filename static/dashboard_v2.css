@@ -1578,17 +1578,34 @@ body {
     margin-top: 2px;
 }
 
-.toast-close {
+
+.toast-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.toast-copy {
     background: none;
     border: none;
     color: var(--color-text-tertiary);
     cursor: pointer;
-    padding: 0;
-    font-size: 18px;
+    padding: 4px;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-fast);
 }
 
-.toast-close:hover {
+.toast-copy:hover {
     color: var(--color-text-primary);
+    background: var(--color-bg-tertiary);
+}
+
+.toast-copy.copied {
+    color: var(--color-success);
 }
 
 /* ============================================
@@ -1656,6 +1673,17 @@ body {
     display: flex;
     justify-content: flex-end;
     gap: var(--spacing-sm);
+}
+
+.info-section {
+    padding: var(--spacing-md);
+    background: var(--color-bg-tertiary);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+}
+
+.info-section h4 {
+    margin: 0;
 }
 
 /* ============================================

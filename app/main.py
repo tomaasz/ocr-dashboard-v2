@@ -8,7 +8,12 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from .routes import dashboard_router, profiles_router, settings_router
+from .routes import (
+    dashboard_router,
+    profiles_router,
+    profiles_single_router,
+    settings_router,
+)
 
 # Track server start time for session filtering
 SERVER_START_TIME = time.time()
@@ -28,6 +33,7 @@ if static_dir.exists():
 # Include routers
 app.include_router(dashboard_router)
 app.include_router(profiles_router)
+app.include_router(profiles_single_router)  # Singular /api/profile endpoints
 app.include_router(settings_router)
 
 

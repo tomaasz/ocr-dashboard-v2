@@ -1,0 +1,493 @@
+        <!-- Job Config Tab -->
+        <div class="tab-panel" id="tab-jobconfig">
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">Konfiguracja Job</h1>
+                    <p class="page-subtitle">Ustawienia nowego zadania OCR</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-success" onclick="startJob()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polygon points="5 3 19 12 5 21 5 3" />
+                        </svg>
+                        Uruchom Job
+                    </button>
+                </div>
+            </div>
+            
+            <div class="config-container">
+                <!-- Job Config Tabs -->
+                <div class="config-tabs">
+                    <button class="config-tab active" data-config-tab="basic"
+                        onclick="switchConfigTab('basic')">Basic</button>
+                    <button class="config-tab" data-config-tab="performance"
+                        onclick="switchConfigTab('performance')">Performance</button>
+                    <button class="config-tab" data-config-tab="database"
+                        onclick="switchConfigTab('database')">Database</button>
+                    <button class="config-tab" data-config-tab="preprocess"
+                        onclick="switchConfigTab('preprocess')">Preprocess</button>
+                    <button class="config-tab" data-config-tab="advanced"
+                        onclick="switchConfigTab('advanced')">Advanced</button>
+                </div>
+
+                <!-- Basic Tab -->
+                <div class="config-panel active" id="config-basic">
+                    <div class="form-group">
+                        <label class="form-label">Source Path</label>
+                        <div class="flex gap-sm">
+                            <input type="text" class="form-input" id="jobSourcePath" placeholder="/path/to/images">
+                            <button class="btn btn-secondary" onclick="openFileBrowser()">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path
+                                        d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Batch ID</label>
+                        <input type="text" class="form-input" id="jobBatchId" placeholder="auto-generated if empty">
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="jobHeadedMode">
+                            Headed Mode (pokazuj przeglądarkę)
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Silnik OCR</label>
+                        <select class="form-select" id="jobEngine">
+                            <option value="auto">Auto (domyślnie)</option>
+                            <option value="gemini">Gemini</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Profile do uruchomienia</label>
+                        <div class="flex gap-sm flex-wrap" style="margin-bottom: var(--spacing-sm);">
+                            <button class="btn btn-secondary btn-sm" onclick="selectAllJobProfiles()">Wszystkie</button>
+                            <button class="btn btn-secondary btn-sm" onclick="selectOkLimitJobProfiles()">OK
+                                Limit</button>
+                            <button class="btn btn-secondary btn-sm" onclick="clearJobProfiles()">Wyczyść</button>
+                            <span
+                                style="border-left: 1px solid var(--color-border); margin: 0 var(--spacing-xs);"></span>
+                            <button class="btn btn-secondary btn-sm" onclick="sortJobProfiles('asc')">A→Z</button>
+                            <button class="btn btn-secondary btn-sm" onclick="sortJobProfiles('desc')">Z→A</button>
+                            <span
+                                style="border-left: 1px solid var(--color-border); margin: 0 var(--spacing-xs);"></span>
+                            <button class="btn btn-primary btn-sm" onclick="openAddProfileModal()">+ Dodaj</button>
+                        </div>
+                        <div class="job-profiles-list" id="jobProfilesList"
+                            style="max-height: 150px; overflow-y: auto; border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--spacing-sm);">
+                            {% for profile in profiles %}
+                            <label class="checkbox-label" style="margin-bottom: 4px;">
+                                <input type="checkbox" class="job-profile-cb" value="{{ profile.name }}" checked>
+                                {{ profile.name }}
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Performance Tab -->
+                <div class="config-panel" id="config-performance">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Workers</label>
+                            <input type="number" class="form-input" id="jobWorkers" value="2" min="1" max="10">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Scans per Worker</label>
+                            <input type="number" class="form-input" id="jobScansPerWorker" value="2" min="1" max="100">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Collect Timeout (sec)</label>
+                        <input type="number" class="form-input" id="jobCollectTimeout" value="400" min="60" max="1200">
+                    </div>
+                    <hr style="border-color: var(--color-border); margin: var(--spacing-md) 0;">
+                    <p class="text-secondary" style="font-size: 11px; margin-bottom: var(--spacing-sm);">Karty
+                        przeglądarki</p>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="jobCloseIdleTabs" checked>
+                                Auto zamykaj nieużywane karty
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Max kart / kontekst (0=bez)</label>
+                            <input type="number" class="form-input" id="jobMaxTabsPerContext" value="0" min="0">
+                        </div>
+                    </div>
+                    <hr style="border-color: var(--color-border); margin: var(--spacing-md) 0;">
+                    <p class="text-secondary" style="font-size: 11px; margin-bottom: var(--spacing-sm);">Konteksty</p>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="jobIsolatedContexts">
+                                Izolowane konteksty (więcej stabilności)
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Pula kontekstów (0=1/worker)</label>
+                            <input type="number" class="form-input" id="jobContextPoolSize" value="0" min="0">
+                        </div>
+                    </div>
+                    <hr style="border-color: var(--color-border); margin: var(--spacing-md) 0;">
+                    <p class="text-secondary" style="font-size: 11px; margin-bottom: var(--spacing-sm);">Profil UI</p>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Viewport Width</label>
+                            <input type="number" class="form-input" id="jobViewportWidth" value="1200">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Viewport Height</label>
+                            <input type="number" class="form-input" id="jobViewportHeight" value="800">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="jobReducedMotion" checked>
+                            Ogranicz animacje (reduced motion)
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Database Tab -->
+                <div class="config-panel" id="config-database">
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="jobPgEnabled" checked>
+                            PostgreSQL Enabled
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">PostgreSQL DSN</label>
+                        <input type="text" class="form-input" id="jobPgDsn"
+                            value="postgresql://tomaasz:123Karinka!%40%23@127.0.0.1:5432/ocr"
+                            placeholder="postgresql://user:pass@host:5432/db">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Table</label>
+                        <input type="text" class="form-input" id="jobPgTable" value="public.ocr_raw_texts">
+                    </div>
+                    <hr style="border-color: var(--color-border); margin: var(--spacing-md) 0;">
+                    <p class="text-secondary"
+                        style="font-size: 11px; margin-bottom: var(--spacing-sm); text-transform: uppercase;">
+                        Synchronizacja</p>
+                    <button class="btn btn-primary" onclick="syncProfiles()" style="width: 100%;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M21 2v6h-6" />
+                            <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+                            <path d="M3 22v-6h6" />
+                            <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+                        </svg>
+                        Synchronizuj profile (Remote)
+                    </button>
+                    <p class="text-secondary"
+                        style="font-size: 11px; margin-top: var(--spacing-xs); text-align: center;">
+                        Kopiuje lokalne profile (Gemini) na zdalnego workera
+                    </p>
+                </div>
+
+                <!-- Preprocess Tab -->
+                <div class="config-panel" id="config-preprocess">
+                    <p class="text-secondary" style="margin-bottom: var(--spacing-md); font-size: 12px;">
+                        Parametry przetwarzania obrazu. Domyślne wartości są optymalne dla większości dokumentów.
+                    </p>
+
+                    <!-- Skalowanie i szum -->
+                    <p class="text-secondary"
+                        style="font-size: 11px; margin-bottom: var(--spacing-xs); text-transform: uppercase;">Skalowanie
+                        i szum</p>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Max Dimension</label>
+                            <input type="number" class="form-input" id="jobPreprocMaxDim" value="2500">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Median Kernel</label>
+                            <input type="number" class="form-input" id="jobPreprocMedianKernel" value="3">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Denoise Strength</label>
+                            <input type="number" class="form-input" id="jobPreprocDenoise" value="8">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Morph Kernel</label>
+                            <input type="number" class="form-input" id="jobPreprocMorph" value="2">
+                        </div>
+                    </div>
+
+                    <hr style="border-color: var(--color-border); margin: var(--spacing-md) 0;">
+                    <p class="text-secondary"
+                        style="font-size: 11px; margin-bottom: var(--spacing-xs); text-transform: uppercase;">Kontrast i
+                        kontury</p>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">CLAHE Clip Limit</label>
+                            <input type="number" class="form-input" id="jobPreprocClahe" value="2.0" step="0.1">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">CLAHE Grid Size</label>
+                            <input type="text" class="form-input" id="jobPreprocClaheGrid" value="8,8"
+                                placeholder="8,8">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Local Contrast Sigma</label>
+                            <input type="number" class="form-input" id="jobPreprocLocalSigma" value="12.0" step="0.1">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Local Contrast Amount</label>
+                            <input type="number" class="form-input" id="jobPreprocLocalAmount" value="0.35" step="0.05">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Blackhat Kernel</label>
+                            <input type="number" class="form-input" id="jobPreprocBlackhatKernel" value="5">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Blackhat Strength</label>
+                            <input type="number" class="form-input" id="jobPreprocBlackhatStrength" value="0.45"
+                                step="0.05">
+                        </div>
+                    </div>
+
+                    <hr style="border-color: var(--color-border); margin: var(--spacing-md) 0;">
+                    <p class="text-secondary"
+                        style="font-size: 11px; margin-bottom: var(--spacing-xs); text-transform: uppercase;">
+                        Wyostrzenie</p>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Unsharp Amount</label>
+                            <input type="number" class="form-input" id="jobPreprocUnsharpAmount" value="1.2" step="0.1">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Unsharp Radius</label>
+                            <input type="number" class="form-input" id="jobPreprocUnsharpRadius" value="1">
+                        </div>
+                    </div>
+
+                    <hr style="border-color: var(--color-border); margin: var(--spacing-md) 0;">
+                    <p class="text-secondary"
+                        style="font-size: 11px; margin-bottom: var(--spacing-xs); text-transform: uppercase;">Marginesy
+                        i tło</p>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Margin Percent</label>
+                            <input type="number" class="form-input" id="jobPreprocMarginPercent" value="0.05"
+                                step="0.01">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Dark Threshold</label>
+                            <input type="number" class="form-input" id="jobPreprocDarkThreshold" value="60">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Margin Ink Ratio Max</label>
+                            <input type="number" class="form-input" id="jobPreprocMarginInkRatio" value="0.01"
+                                step="0.001">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Margin Shadow Mean Max</label>
+                            <input type="number" class="form-input" id="jobPreprocMarginShadow" value="200">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Background Kernel Ratio</label>
+                            <input type="number" class="form-input" id="jobPreprocBgKernelRatio" value="0.025"
+                                step="0.001">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Background Kernel Min</label>
+                            <input type="number" class="form-input" id="jobPreprocBgKernelMin" value="31">
+                        </div>
+                    </div>
+
+                    <hr style="border-color: var(--color-border); margin: var(--spacing-md) 0;">
+                    <p class="text-secondary"
+                        style="font-size: 11px; margin-bottom: var(--spacing-xs); text-transform: uppercase;">
+                        Binaryzacja (Sauvola)</p>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="jobPreprocBinarization">
+                            Włącz binaryzację adaptacyjną (Sauvola)
+                        </label>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Sauvola Window</label>
+                            <input type="number" class="form-input" id="jobPreprocSauvolaW" value="31">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Sauvola K</label>
+                            <input type="number" class="form-input" id="jobPreprocSauvolaK" value="0.2" step="0.05">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Sauvola R</label>
+                        <input type="number" class="form-input" id="jobPreprocSauvolaR" value="128.0" step="0.5">
+                    </div>
+
+                    <hr style="border-color: var(--color-border); margin: var(--spacing-md) 0;">
+                    <p class="text-secondary"
+                        style="font-size: 11px; margin-bottom: var(--spacing-xs); text-transform: uppercase;">Maska
+                        tekstu</p>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Block Size</label>
+                            <input type="number" class="form-input" id="jobPreprocTextMaskBlock" value="31">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">C</label>
+                            <input type="number" class="form-input" id="jobPreprocTextMaskC" value="12">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Open Kernel</label>
+                            <input type="number" class="form-input" id="jobPreprocTextMaskOpenK" value="3">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Close Kernel</label>
+                            <input type="number" class="form-input" id="jobPreprocTextMaskCloseK" value="9">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Close Iters</label>
+                            <input type="number" class="form-input" id="jobPreprocTextMaskCloseI" value="2">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Dilate Iters</label>
+                            <input type="number" class="form-input" id="jobPreprocTextMaskDilateI" value="1">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Min Area Ratio</label>
+                        <input type="number" class="form-input" id="jobPreprocTextMaskMinArea" value="0.0005"
+                            step="0.0001">
+                    </div>
+
+                    <hr style="border-color: var(--color-border); margin: var(--spacing-md) 0;">
+                    <p class="text-secondary"
+                        style="font-size: 11px; margin-bottom: var(--spacing-xs); text-transform: uppercase;">Trim
+                        brzegów</p>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Trim Band Ratio</label>
+                            <input type="number" class="form-input" id="jobPreprocTrimBand" value="0.02" step="0.01">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Trim Ink Ratio Max</label>
+                            <input type="number" class="form-input" id="jobPreprocTrimInk" value="0.02" step="0.01">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Trim Max Ratio</label>
+                            <input type="number" class="form-input" id="jobPreprocTrimMax" value="0.15" step="0.01">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Trim Min Dimension</label>
+                            <input type="number" class="form-input" id="jobPreprocTrimMinDim" value="200">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Advanced Tab -->
+                <div class="config-panel" id="config-advanced">
+                    <p class="text-secondary" style="font-size: 11px; margin-bottom: var(--spacing-sm);">Tryb pracy</p>
+                    <div class="form-group">
+                        <label class="checkbox-label"><input type="checkbox" id="jobContinueMode" checked> Continue Mode
+                            (wznów od miejsca przerwania)</label>
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-label"><input type="checkbox" id="jobProOnly" checked> Pro Only (tylko
+                            model Pro)</label>
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-label"><input type="checkbox" id="jobCleanTemp" checked> Clean Temp
+                            Images</label>
+                    </div>
+
+                    <hr style="border-color: var(--color-border); margin: var(--spacing-md) 0;">
+                    <p class="text-secondary" style="font-size: 11px; margin-bottom: var(--spacing-sm);">Diagnostyka</p>
+                    <div class="form-group">
+                        <label class="checkbox-label"><input type="checkbox" id="jobDebugArtifacts"> Debug Artifacts
+                            (screenshoty błędów)</label>
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-label"><input type="checkbox" id="jobCaptureVideo"> Capture Video</label>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Tracing Mode</label>
+                        <select class="form-select" id="jobTracingMode">
+                            <option value="off">Wyłączony</option>
+                            <option value="on_failure">Tylko na błąd</option>
+                            <option value="continuous">Ciągły</option>
+                        </select>
+                    </div>
+
+                    <hr style="border-color: var(--color-border); margin: var(--spacing-md) 0;">
+                    <p class="text-secondary" style="font-size: 11px; margin-bottom: var(--spacing-sm);">Sesja</p>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="checkbox-label"><input type="checkbox" id="jobAuthEnsure" checked> Auto-ensure
+                                sesji</label>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Interwał (sek)</label>
+                            <input type="number" class="form-input" id="jobAuthEnsureInterval" value="900" min="60">
+                        </div>
+                    </div>
+
+                    <hr style="border-color: var(--color-border); margin: var(--spacing-md) 0;">
+                    <p class="text-secondary" style="font-size: 11px; margin-bottom: var(--spacing-sm);">Model Pro</p>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Retry (ilość)</label>
+                            <input type="number" class="form-input" id="jobModelSwitchRetries" value="3" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Cooldown (ms)</label>
+                            <input type="number" class="form-input" id="jobModelSwitchCooldown" value="1200" min="0">
+                        </div>
+                    </div>
+
+                    <hr style="border-color: var(--color-border); margin: var(--spacing-md) 0;">
+                    <p class="text-secondary" style="font-size: 11px; margin-bottom: var(--spacing-sm);">Limit Pro</p>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Sprawdzaj co (sek)</label>
+                            <input type="number" class="form-input" id="jobLimitCheckInterval" value="1800" min="60">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Bufor pauzy (sek)</label>
+                            <input type="number" class="form-input" id="jobProPauseBuffer" value="180" min="0">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Fallback pauzy (min)</label>
+                        <input type="number" class="form-input" id="jobProFallbackPause" value="60" min="1">
+                    </div>
+
+                    <hr style="border-color: var(--color-border); margin: var(--spacing-md) 0;">
+                    <div class="form-group">
+                        <label class="form-label">Browser ID (opcjonalne)</label>
+                        <input type="text" class="form-input" id="jobBrowserId" placeholder="np. pw_custom_01">
+                    </div>
+                </div>
+            </div>
+            </div>
+        </div>
+

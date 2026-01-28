@@ -10,3 +10,9 @@ psycopg2-binary>=2.9.0
 
 # Optional: Testing
 pytest>=7.0.0
+
+# OCR Engine
+playwright
+google-generativeai
+Pillow
+opencv-python-headless

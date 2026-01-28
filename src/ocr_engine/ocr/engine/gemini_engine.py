@@ -4,7 +4,7 @@ Gemini OCR Engine - Modular Version
 Clean orchestrator using extracted modules:
 - browser_controller.py - Playwright operations
 - db_locking.py - PostgreSQL locking
-- pro_limit_handler.py - Rate limit handling  
+- pro_limit_handler.py - Rate limit handling
 - image_processor.py - OpenCV preprocessing
 - prompts.py - Prompt management
 """
@@ -20,23 +20,24 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
-from typing import Any, List, Optional, Set, Tuple
 
-from playwright.sync_api import BrowserContext, Page
 from PIL import Image, ImageDraw, ImageFont
+from playwright.sync_api import BrowserContext, Page
+
+from ocr_engine.utils.activity_logger import ActivityLogger
+from ocr_engine.utils.path_security import sanitize_profile_name, validate_profiles_dir
 
 from .browser_controller import GeminiBrowserController, SessionExpiredError
 from .db_locking import DbLockingManager
-from .image_processor import preprocess_image_smart, clear_temp_images
-from .pro_limit_handler import ProLimitHandler, PRO_LIMIT_TEXT_RE
+from .image_processor import clear_temp_images, preprocess_image_smart
+from .pro_limit_handler import PRO_LIMIT_TEXT_RE, ProLimitHandler
 from .prompts import PromptManager
-from ocr_engine.utils.path_security import sanitize_profile_name, validate_profiles_dir
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
-def _estimate_tokens(text: Optional[str]) -> int:
+def _estimate_tokens(text: str | None) -> int:
     if not text:
         return 0
     return max(1, int(len(text) / 4))
@@ -44,9 +45,10 @@ def _estimate_tokens(text: Optional[str]) -> int:
 
 class FileStatus(Enum):
     """Status returned by _find_and_lock_next_file."""
-    FOUND = "found"           # File available to process
-    ALL_BUSY = "all_busy"     # Files exist but all locked by others
-    ALL_DONE = "all_done"     # All files have been processed
+
+    FOUND = "found"  # File available to process
+    ALL_BUSY = "all_busy"  # Files exist but all locked by others
+    ALL_DONE = "all_done"  # All files have been processed
 
 
 @dataclass
@@ -60,21 +62,20 @@ class PageWorker:
     wid: int
     page: Page
     busy: bool = False
-    image_path: Optional[Path] = None
-    prompt_text: Optional[str] = None
+    image_path: Path | None = None
+    prompt_text: str | None = None
     started_ts: float = 0.0
     done_count: int = 0
-    card_id: Optional[str] = None
-    model_label: Optional[str] = None
+    card_id: str | None = None
+    model_label: str | None = None
     last_capture_ts: float = 0.0
-    context: Optional[BrowserContext] = None  # Isolated context for this worker
-
+    context: BrowserContext | None = None  # Isolated context for this worker
 
 
 class GeminiEngine:
     """
     OCR Engine using Gemini Web via Playwright.
-    
+
     Modular design using extracted components for better testability and maintenance.
     """
 
@@ -82,7 +83,7 @@ class GeminiEngine:
         self,
         job_dir: str,
         prompt_id: str = "generic_json",
-        profile_dir: Optional[str] = None,
+        profile_dir: str | None = None,
         headed: bool = False,
         pwdebug: bool = False,
         locale: str = "pl-PL",
@@ -97,15 +98,17 @@ class GeminiEngine:
 
         # Profile configuration
         profile_suffix = os.environ.get("OCR_PROFILE_SUFFIX", "").strip()
-        
+
         # Security: Use centralized sanitization
         if profile_suffix:
             original_suffix = profile_suffix
             profile_suffix = sanitize_profile_name(profile_suffix)
-            
+
             if original_suffix != profile_suffix:
-                logger.warning(f"⚠️ [Security] Sanitized OCR_PROFILE_SUFFIX: '{original_suffix}' -> '{profile_suffix}'")
-        
+                logger.warning(
+                    f"⚠️ [Security] Sanitized OCR_PROFILE_SUFFIX: '{original_suffix}' -> '{profile_suffix}'"
+                )
+
         self.active_profile_name = profile_suffix if profile_suffix else "default"
         dir_name = f"gemini-profile-{profile_suffix}" if profile_suffix else "gemini-profile"
 
@@ -125,11 +128,13 @@ class GeminiEngine:
                 self.profile_dir = Path(profile_dir).resolve()
                 # Basic check if provided explicitly
                 if not self.profile_dir.is_absolute():
-                     logger.warning(f"⚠️ [Security] Relative profile_dir provided: {profile_dir}. Resolving to Absolute.")
-                     self.profile_dir = self.profile_dir.resolve()
+                    logger.warning(
+                        f"⚠️ [Security] Relative profile_dir provided: {profile_dir}. Resolving to Absolute."
+                    )
+                    self.profile_dir = self.profile_dir.resolve()
             except Exception as e:
-                 logger.error(f"❌ [Security] Invalid profile_dir: {e}")
-                 raise
+                logger.error(f"❌ [Security] Invalid profile_dir: {e}")
+                raise
 
         logger.info(f"Using browser profile: {self.profile_dir} (ID: {self.active_profile_name})")
 
@@ -168,7 +173,11 @@ class GeminiEngine:
         try:
             self.scans_per_worker = max(
                 1,
-                int(os.environ.get("OCR_SCANS_PER_WORKER") or os.environ.get("OCR_DEFAULT_SCANS_PER_WORKER") or "2"),
+                int(
+                    os.environ.get("OCR_SCANS_PER_WORKER")
+                    or os.environ.get("OCR_DEFAULT_SCANS_PER_WORKER")
+                    or "2"
+                ),
             )
         except Exception:
             self.scans_per_worker = 2
@@ -184,13 +193,33 @@ class GeminiEngine:
         self.pg_enabled = os.environ.get("OCR_PG_ENABLED", "0").strip() == "1"
         self.pg_table = os.environ.get("OCR_PG_TABLE", "public.ocr_raw_texts")
         self.batch_id = os.environ.get("OCR_BATCH_ID") or time.strftime("batch_%Y%m%d_%H%M%S")
-        self.continue_mode = os.environ.get("OCR_CONTINUE", "1").strip().lower() not in ("0", "false", "no")
-        self.continuous_mode = os.environ.get("OCR_CONTINUOUS", "1").strip().lower() in ("1", "true", "yes")
+        self.continue_mode = os.environ.get("OCR_CONTINUE", "1").strip().lower() not in (
+            "0",
+            "false",
+            "no",
+        )
+        self.continuous_mode = os.environ.get("OCR_CONTINUOUS", "1").strip().lower() in (
+            "1",
+            "true",
+            "yes",
+        )
         self.browser_id = os.environ.get("OCR_BROWSER_ID") or f"pw_{os.getpid()}_{int(time.time())}"
-        self.pro_only = os.environ.get("OCR_PRO_ONLY", "1").strip().lower() not in ("0", "false", "no")
+        self.pro_only = os.environ.get("OCR_PRO_ONLY", "1").strip().lower() not in (
+            "0",
+            "false",
+            "no",
+        )
         self.execution_mode = os.environ.get("OCR_EXECUTION_MODE", "local").strip() or "local"
-        self.auto_advance = os.environ.get("OCR_AUTO_ADVANCE", "0").strip().lower() in ("1", "true", "yes")
-        self.use_db_counts = os.environ.get("OCR_USE_DB_COUNTS", "1").strip().lower() in ("1", "true", "yes")
+        self.auto_advance = os.environ.get("OCR_AUTO_ADVANCE", "0").strip().lower() in (
+            "1",
+            "true",
+            "yes",
+        )
+        self.use_db_counts = os.environ.get("OCR_USE_DB_COUNTS", "1").strip().lower() in (
+            "1",
+            "true",
+            "yes",
+        )
         try:
             self.counts_max_age_sec = int(os.environ.get("OCR_COUNTS_MAX_AGE_SEC", "3600").strip())
         except Exception:
@@ -210,7 +239,9 @@ class GeminiEngine:
             self.startup_retries = 3
         self.startup_retries = max(1, self.startup_retries)
         try:
-            self.startup_retry_base_sec = int(os.environ.get("OCR_STARTUP_RETRY_BASE_SEC", "5").strip())
+            self.startup_retry_base_sec = int(
+                os.environ.get("OCR_STARTUP_RETRY_BASE_SEC", "5").strip()
+            )
         except Exception:
             self.startup_retry_base_sec = 5
         self.startup_retry_base_sec = max(1, self.startup_retry_base_sec)
@@ -228,7 +259,7 @@ class GeminiEngine:
             self.db.init_error_traces_table()
             self.db.init_artifacts_table()
             self.db.init_critical_events_table()
-        
+
         self.limit_handler = ProLimitHandler(
             profile_name=self.active_profile_name,
             db_manager=self.db if self.pg_enabled else None,
@@ -240,7 +271,12 @@ class GeminiEngine:
         self.prompt_manager = PromptManager(prompts_file)
 
         # Remote browser selection (per-profile)
-        remote_enabled = os.environ.get("OCR_REMOTE_BROWSER_ENABLED", "0").strip().lower() in ("1", "true", "yes", "y")
+        remote_enabled = os.environ.get("OCR_REMOTE_BROWSER_ENABLED", "0").strip().lower() in (
+            "1",
+            "true",
+            "yes",
+            "y",
+        )
         excluded = {
             p.strip()
             for p in os.environ.get("OCR_REMOTE_BROWSER_EXCLUDE_PROFILES", "").split(",")
@@ -273,7 +309,9 @@ class GeminiEngine:
                         safe_proxy = self.proxy_config.copy()
                         if "password" in safe_proxy:
                             safe_proxy["password"] = "***"
-                        logger.info(f"🌐 [Proxy] Using proxy for profile '{self.active_profile_name}': {safe_proxy}")
+                        logger.info(
+                            f"🌐 [Proxy] Using proxy for profile '{self.active_profile_name}': {safe_proxy}"
+                        )
                 except Exception as e:
                     logger.error(f"❌ [Proxy] Failed to load proxy config: {e}")
 
@@ -298,21 +336,29 @@ class GeminiEngine:
             self.browser.remote_user = os.environ.get("OCR_REMOTE_BROWSER_USER")
             self.browser.remote_profile_root = os.environ.get("OCR_REMOTE_BROWSER_PROFILE_ROOT")
             self.browser.remote_python = os.environ.get("OCR_REMOTE_BROWSER_PYTHON", "python3")
-            self.browser.remote_port_base = int(os.environ.get("OCR_REMOTE_BROWSER_PORT_BASE", "9222"))
-            self.browser.remote_port_span = int(os.environ.get("OCR_REMOTE_BROWSER_PORT_SPAN", "100"))
+            self.browser.remote_port_base = int(
+                os.environ.get("OCR_REMOTE_BROWSER_PORT_BASE", "9222")
+            )
+            self.browser.remote_port_span = int(
+                os.environ.get("OCR_REMOTE_BROWSER_PORT_SPAN", "100")
+            )
             self.browser.remote_local_port_base = int(
                 os.environ.get("OCR_REMOTE_BROWSER_LOCAL_PORT_BASE", "9222")
             )
-            self.browser.remote_ssh_opts = os.environ.get("OCR_REMOTE_BROWSER_SSH_OPTS", "-o StrictHostKeyChecking=no")
-            self.browser.remote_tunnel_enabled = os.environ.get("OCR_REMOTE_BROWSER_TUNNEL", "1") not in ("0", "false", "no", "n")
+            self.browser.remote_ssh_opts = os.environ.get(
+                "OCR_REMOTE_BROWSER_SSH_OPTS", "-o StrictHostKeyChecking=no"
+            )
+            self.browser.remote_tunnel_enabled = os.environ.get(
+                "OCR_REMOTE_BROWSER_TUNNEL", "1"
+            ) not in ("0", "false", "no", "n")
             if os.environ.get("OCR_REMOTE_BROWSER_CHROME_BIN"):
                 self.browser.remote_chrome_bin = os.environ.get("OCR_REMOTE_BROWSER_CHROME_BIN")
 
         # Runtime state
-        self.workers: List[PageWorker] = []
+        self.workers: list[PageWorker] = []
         self.current_stage = "init"
-        self._processed_local: Set[str] = set()
-        self._inflight_local: Set[str] = set()
+        self._processed_local: set[str] = set()
+        self._inflight_local: set[str] = set()
         # Increased thread pool for preprocessing + preload ahead
         estimated_workers = self.workers_count * self.tabs_per_window
         self._bg_pool = ThreadPoolExecutor(max_workers=max(4, estimated_workers * 2))
@@ -320,10 +366,10 @@ class GeminiEngine:
         self._preload_queue: dict = {}
         # Queue cursor + DB done cache for faster continuation scans
         self._scan_cursor = 0
-        self._scan_cursor_source_dir: Optional[str] = None
-        self._db_done_cache: Set[str] = set()
+        self._scan_cursor_source_dir: str | None = None
+        self._db_done_cache: set[str] = set()
         self._db_done_cache_ts = 0.0
-        self._db_done_cache_source_dir: Optional[str] = None
+        self._db_done_cache_source_dir: str | None = None
         try:
             self.done_cache_ttl_sec = int(os.environ.get("OCR_DONE_CACHE_TTL_SEC", "30"))
         except Exception:
@@ -336,26 +382,34 @@ class GeminiEngine:
 
         if os.environ.get("OCR_CLEAN_TEMP_IMAGES", "1").strip() == "1":
             clear_temp_images(self.temp_img_dir)
-            
+
         self.last_live_preview_ts = 0
         self.last_limit_check_ts = 0  # For periodic limit verification
         self._session_retry_count = 0
         self._limit_retry_count = 0
         self.limit_check_interval_sec = int(os.environ.get("OCR_LIMIT_CHECK_INTERVAL", "1800"))
-        self.auth_ensure_enabled = os.environ.get("OCR_AUTH_ENSURE_ENABLED", "1").strip().lower() not in ("0", "false", "no")
+        self.auth_ensure_enabled = os.environ.get(
+            "OCR_AUTH_ENSURE_ENABLED", "1"
+        ).strip().lower() not in ("0", "false", "no")
         try:
-            self.auth_ensure_interval_sec = int(os.environ.get("OCR_AUTH_ENSURE_INTERVAL_SEC", "900").strip())
+            self.auth_ensure_interval_sec = int(
+                os.environ.get("OCR_AUTH_ENSURE_INTERVAL_SEC", "900").strip()
+            )
         except Exception:
             self.auth_ensure_interval_sec = 900
         self.auth_ensure_interval_sec = max(60, self.auth_ensure_interval_sec)
         self.last_auth_ensure_ts = 0.0
-        self.close_idle_tabs = os.environ.get("OCR_CLOSE_IDLE_TABS", "1").strip().lower() not in ("0", "false", "no")
+        self.close_idle_tabs = os.environ.get("OCR_CLOSE_IDLE_TABS", "1").strip().lower() not in (
+            "0",
+            "false",
+            "no",
+        )
         try:
             self.max_tabs_per_context = int(os.environ.get("OCR_MAX_TABS_PER_CONTEXT", "0").strip())
         except Exception:
             self.max_tabs_per_context = 0
         self.max_tabs_per_context = max(0, self.max_tabs_per_context)
-        
+
         # Model verification configuration
         try:
             self.model_check_interval_sec = int(os.environ.get("OCR_MODEL_CHECK_INTERVAL", "300"))
@@ -363,6 +417,10 @@ class GeminiEngine:
             self.model_check_interval_sec = 300  # Default: 5 minutes
         self.model_check_interval_sec = max(0, self.model_check_interval_sec)
         self.last_model_check_ts = 0
+
+        # Activity logging for dashboard visibility
+        self.activity_logger = ActivityLogger()
+        self._run_start_time: float = 0.0
 
     # ---- Main Run Loop ----
 
@@ -391,21 +449,38 @@ class GeminiEngine:
                     self._session_retry_count = 0
                     self._init_pages()
                     startup_ok = True
+                    self._run_start_time = time.time()
+                    # Log successful start to activity log
+                    self.activity_logger.log_start(
+                        component="profile_worker",
+                        profile_name=self.active_profile_name,
+                        reason=f"Started OCR engine - workers={self.workers_count}, continuous={self.continuous_mode}",
+                    )
                     break
                 except SessionExpiredError:
                     if self.browser.context and self.browser.context.pages:
-                        if self._capture_session_screenshot(self.browser.context.pages[0], "startup"):
+                        if self._capture_session_screenshot(
+                            self.browser.context.pages[0], "startup"
+                        ):
                             raise
-                    wait_s = self._next_backoff_seconds(self._session_retry_count, base=self.startup_retry_base_sec, cap=60)
-                    logger.warning(f"⚠️ [Session] Screenshot missing, retrying browser start in {wait_s}s (no proof).")
+                    wait_s = self._next_backoff_seconds(
+                        self._session_retry_count, base=self.startup_retry_base_sec, cap=60
+                    )
+                    logger.warning(
+                        f"⚠️ [Session] Screenshot missing, retrying browser start in {wait_s}s (no proof)."
+                    )
                     try:
                         self.browser.close()
                     except Exception:
                         pass
                     time.sleep(wait_s)
                 except Exception as e:
-                    wait_s = self._next_backoff_seconds(attempt, base=self.startup_retry_base_sec, cap=60)
-                    logger.warning(f"⚠️ [Startup] Attempt {attempt}/{self.startup_retries} failed: {e}")
+                    wait_s = self._next_backoff_seconds(
+                        attempt, base=self.startup_retry_base_sec, cap=60
+                    )
+                    logger.warning(
+                        f"⚠️ [Startup] Attempt {attempt}/{self.startup_retries} failed: {e}"
+                    )
                     try:
                         self.browser.close()
                     except Exception:
@@ -414,8 +489,16 @@ class GeminiEngine:
                         logger.info(f"🔁 [Startup] Retrying browser start in {wait_s}s...")
                         time.sleep(wait_s)
             if not startup_ok:
+                # Log startup failure before raising exception
+                self.activity_logger.log_stop(
+                    component="profile_worker",
+                    profile_name=self.active_profile_name,
+                    exit_code=1,
+                    error_message=f"Startup failed after {self.startup_retries} retries",
+                    reason="Browser startup failed",
+                )
                 raise RuntimeError("Startup failed after retries")
-            
+
             # CRITICAL: Verify limit status from ACTUAL page before starting
             if self.pro_only and self._verify_limit_on_start():
                 logger.info("🔄 [Startup] Limit active - will wait for reset.")
@@ -460,7 +543,9 @@ class GeminiEngine:
                 )
 
                 if not self.pg_enabled:
-                    logger.info(f"🧾 [LocalProgress] processed={len(self._processed_local)}, inflight={len(self._inflight_local)}")
+                    logger.info(
+                        f"🧾 [LocalProgress] processed={len(self._processed_local)}, inflight={len(self._inflight_local)}"
+                    )
 
                 processed_in_this_run = 0
                 all_done = False
@@ -490,7 +575,9 @@ class GeminiEngine:
 
                     # 2) CRITICAL: Check ALL tabs for Pro limit (not just active worker tabs)
                     if self.pro_only and self._check_all_tabs_for_limit():
-                        logger.critical("🛑 [Limit] PRO LIMIT detected in multi-tab scan. Shutting down ALL workers.")
+                        logger.critical(
+                            "🛑 [Limit] PRO LIMIT detected in multi-tab scan. Shutting down ALL workers."
+                        )
                         # Stop all workers immediately
                         for w in self.workers:
                             if w.busy:
@@ -499,9 +586,16 @@ class GeminiEngine:
                         break  # Exit main loop
 
                     # 3) Assign new work
-                    free_workers = [w for w in self.workers if not w.busy and (self.continuous_mode or w.done_count < self.scans_per_worker)]
+                    free_workers = [
+                        w
+                        for w in self.workers
+                        if not w.busy
+                        and (self.continuous_mode or w.done_count < self.scans_per_worker)
+                    ]
                     if not free_workers:
-                        if not self.continuous_mode and all(w.done_count >= self.scans_per_worker for w in self.workers):
+                        if not self.continuous_mode and all(
+                            w.done_count >= self.scans_per_worker for w in self.workers
+                        ):
                             break
                         time.sleep(0.4)
                         continue
@@ -516,43 +610,49 @@ class GeminiEngine:
                             continue
 
                         status, next_file = self._find_and_lock_next_file(all_files)
-                        
+
                         if status == FileStatus.ALL_DONE:
                             logger.info("✅ [Queue] All files have been processed!")
                             all_done = True
                             break
-                        elif status == FileStatus.ALL_BUSY:
+                        if status == FileStatus.ALL_BUSY:
                             if self.auto_advance:
-                                logger.info("⏩ [Queue] Current folder is fully busy (locked by others). Auto-advancing.")
+                                logger.info(
+                                    "⏩ [Queue] Current folder is fully busy (locked by others). Auto-advancing."
+                                )
                                 all_done = True
                                 break
 
                             no_file_retries += 1
                             if no_file_retries >= 30:  # ~15 seconds of waiting
-                                logger.warning("⏳ [Queue] All files locked by others for too long. Waiting...")
+                                logger.warning(
+                                    "⏳ [Queue] All files locked by others for too long. Waiting..."
+                                )
                                 no_file_retries = 0
                             break  # Wait for other profiles to finish
-                        elif status == FileStatus.FOUND and next_file:
+                        if status == FileStatus.FOUND and next_file:
                             files_assigned = True
                             prompt_text = self._setup_prompt(next_file)
                             self._worker_start(w, next_file, prompt_text)
                             time.sleep(0.15)
-                    
+
                     # If all files busy, wait a bit longer before retry
                     if not files_assigned and not all_done:
                         time.sleep(0.5)
 
                     # Preload next files for faster processing
                     self._preload_next_files(all_files, count=total_workers)
-                    
+
                     # Clean up idle tabs periodically (every ~10 iterations)
                     if processed_in_this_run % 10 == 0:
                         self._close_idle_tabs()
-                        
+
                         # Log heartbeat with active worker count
                         active_count = sum(1 for w in self.workers if w.busy)
-                        logger.info(f"💓 [Heartbeat] Active: {active_count}/{total_workers} | Done joined: {len(self._processed_local)}")
-                        
+                        logger.info(
+                            f"💓 [Heartbeat] Active: {active_count}/{total_workers} | Done joined: {len(self._processed_local)}"
+                        )
+
                         # Periodic limit verification (every hour)
                         if self.pro_only:
                             self._periodic_limit_check()
@@ -560,7 +660,7 @@ class GeminiEngine:
                     self._auth_ensure("run_loop")
 
                     time.sleep(0.35)
-                    
+
                     # Live Preview Updates (every ~5s)
                     self._update_live_previews()
 
@@ -604,27 +704,29 @@ class GeminiEngine:
             return 2
         finally:
             self._close()
-            
+
     def _update_live_previews(self) -> None:
         """Capture screenshots of busy workers for live dashboard."""
         now = time.time()
         if now - self.last_live_preview_ts < 5.0:
             return
-            
+
         self.last_live_preview_ts = now
         live_dir = self.live_dir
         live_dir.mkdir(parents=True, exist_ok=True)
-        
+
         for w in self.workers:
             if not w.page:
                 continue
             now = time.time()
             should_capture = w.busy
             if not should_capture:
-                should_capture = (now - w.last_capture_ts) >= 30.0  # refresh periodically even if idle
+                should_capture = (
+                    now - w.last_capture_ts
+                ) >= 30.0  # refresh periodically even if idle
             if not should_capture:
                 continue
-            
+
             # Only snapshot if actually busy processing or due to periodic refresh
             try:
                 # Use a lightweight screenshot if possible or standard
@@ -665,7 +767,7 @@ class GeminiEngine:
     def _init_pages(self) -> None:
         if not self.browser.context:
             raise Exception("Browser context not initialized")
-        
+
         self.workers = []
 
         tabs_per_window = max(1, self.tabs_per_window)
@@ -722,7 +824,7 @@ class GeminiEngine:
                     f"[Init] Created worker {worker_id} (window={window_id} tab={tab_idx}) "
                     f"with shared context ({len(context.pages)} tabs)"
                 )
-        
+
         # Initialize all workers
         for w in self.workers:
             try:
@@ -737,26 +839,27 @@ class GeminiEngine:
                 try:
                     self.browser.wait_for_ui_ready(w.page)
                     self._session_retry_count = 0
-                    
+
                     # ✅ CRITICAL: Enforce Pro model at startup
                     # This ensures farm always uses Pro model, not Thinking/Flash
                     if self.pro_only:
                         logger.info(f"[W{w.wid}] 🧠 Enforcing Pro model at startup...")
                         try:
                             self.browser.ensure_pro_model(
-                                w.page,
-                                has_limit_banner_fn=lambda pg: self._has_limit_banner(pg)
+                                w.page, has_limit_banner_fn=lambda pg: self._has_limit_banner(pg)
                             )
                         except Exception as e:
                             logger.warning(f"[W{w.wid}] ⚠️ Model enforcement failed: {e}")
                             # Don't fail startup if model switch fails - continue with current model
-                    
+
                     break
                 except SessionExpiredError:
                     if self._capture_session_screenshot(w.page, "wait_for_ui_ready"):
                         raise
                     wait_s = self._next_backoff_seconds(self._session_retry_count)
-                    logger.warning(f"⚠️ [Session] Screenshot missing, retrying UI ready in {wait_s}s (no proof).")
+                    logger.warning(
+                        f"⚠️ [Session] Screenshot missing, retrying UI ready in {wait_s}s (no proof)."
+                    )
                     time.sleep(wait_s)
                     try:
                         w.page.reload(wait_until="domcontentloaded")
@@ -782,17 +885,19 @@ class GeminiEngine:
             logger.error(f"❌ [W{w.wid}] Start failed for {image_path.name}: {e}")
             self._unlock_file(image_path.name)
             # Worker remains available for next file
-            
+
     def _worker_start_inner(self, w: PageWorker, image_path: Path, prompt_text: str) -> None:
         """Inner implementation of worker start."""
         p = w.page
         self.current_stage = f"worker_{w.wid}_start"
 
-        logger.info(f"🧵 [W{w.wid}] START {w.done_count + 1}/{self.scans_per_worker}: {image_path.name}")
+        logger.info(
+            f"🧵 [W{w.wid}] START {w.done_count + 1}/{self.scans_per_worker}: {image_path.name}"
+        )
         self._save_artifact(f"w{w.wid}_{image_path.name}_prompt.txt", prompt_text)
 
         logger.info(f"🧠 [W{w.wid}] Getting preloaded image + new chat...")
-        
+
         # Start new chat while image might still be preprocessing
         t0 = time.time()
         self.browser.new_chat(p)
@@ -811,39 +916,46 @@ class GeminiEngine:
         if self.pro_only:
             is_pro = ProLimitHandler.is_pro_label(effective)
             has_banner = self._has_limit_banner(p)
-            
+
             if not is_pro or has_banner:
-                logger.critical(f"🛑 [W{w.wid}] MODEL NOT PRO! effective='{effective}' is_pro={is_pro} has_banner={has_banner}")
+                logger.critical(
+                    f"🛑 [W{w.wid}] MODEL NOT PRO! effective='{effective}' is_pro={is_pro} has_banner={has_banner}"
+                )
                 logger.critical(f"🛑 [W{w.wid}] TRIGGERING PAUSE - unlocking {image_path.name}")
                 self._unlock_file(image_path.name)
-                self._trigger_pause_from_page(p, f"W{w.wid} after_switch model={effective}", force_if_missing=True)
+                self._trigger_pause_from_page(
+                    p, f"W{w.wid} after_switch model={effective}", force_if_missing=True
+                )
                 return
 
         # Get preprocessed image from preload queue or process now
         optimized_path = self._get_preloaded_image(image_path)
-        
+
         # Check if preprocessed file exists (might have been deleted)
         if not optimized_path.exists():
             raise FileNotFoundError(f"Preprocessed image missing: {optimized_path}")
-        
+
         # DEBUG: Save copy of preprocessed image AND original for inspection (opt-in)
         if os.environ.get("OCR_DEBUG_PREPROC", "0").strip() in ("1", "true", "yes", "y"):
             try:
                 debug_dir = self.artifacts_dir / "debug_preproc"
                 debug_dir.mkdir(parents=True, exist_ok=True)
                 import shutil
+
                 shutil.copy2(optimized_path, debug_dir / f"PRE_{optimized_path.name}")
                 shutil.copy2(image_path, debug_dir / f"ORG_{image_path.name}")
                 logger.info(f"💾 [Debug] Saved comparison to: {debug_dir}")
             except Exception:
                 pass
-            
-        logger.info(f"🖼️ [W{w.wid}] Preprocess ready: {optimized_path.name} ({time.time() - t0:.2f}s)")
+
+        logger.info(
+            f"🖼️ [W{w.wid}] Preprocess ready: {optimized_path.name} ({time.time() - t0:.2f}s)"
+        )
 
         self.current_stage = f"worker_{w.wid}_upload_send"
         logger.info(f"📎 [W{w.wid}] Upload: {optimized_path.name}")
         self.browser.upload_image(p, optimized_path)
-        
+
         # CLEANUP: Remove temp image to save space (redundant if debug copy exists)
         try:
             if optimized_path.exists():
@@ -873,7 +985,9 @@ class GeminiEngine:
         file_name = w.image_path.name
 
         # Check if still generating
-        stop_btn = p.locator("button[aria-label*='Zatrzymaj' i], button[aria-label*='Stop' i]").first
+        stop_btn = p.locator(
+            "button[aria-label*='Zatrzymaj' i], button[aria-label*='Stop' i]"
+        ).first
         try:
             if stop_btn.count() > 0 and stop_btn.is_visible():
                 return False
@@ -883,11 +997,19 @@ class GeminiEngine:
         self.current_stage = f"worker_{w.wid}_collect"
         try:
             raw, status = self.browser.wait_for_response_or_limit(
-                p, timeout_ms=self.collect_timeout_ms, has_limit_banner_fn=lambda pg: self._has_limit_banner(pg)
+                p,
+                timeout_ms=self.collect_timeout_ms,
+                has_limit_banner_fn=lambda pg: self._has_limit_banner(pg),
             )
 
             if status == "limit_pro":
                 logger.warning(f"⚠️ [W{w.wid}] Pro limit after send: {file_name}")
+                # Log PRO limit event for dashboard visibility
+                self.activity_logger.log_event(
+                    profile_name=self.active_profile_name,
+                    event_type="profile_worker_limit",
+                    reason=f"PRO limit detected after send - file: {file_name}",
+                )
                 self._unlock_file(file_name)
                 w.busy = False
                 w.image_path = None
@@ -939,10 +1061,18 @@ class GeminiEngine:
                 logger.critical(
                     f"🛑 [W{w.wid}] NON-PRO RESULT - skip DB save: model='{final_model}' file={file_name}"
                 )
+                # Log non-PRO model event for dashboard visibility
+                self.activity_logger.log_event(
+                    profile_name=self.active_profile_name,
+                    event_type="profile_worker_limit",
+                    reason=f"Non-PRO model used: {final_model} - result discarded",
+                )
                 self._unlock_file(file_name)
                 if self.pg_enabled:
                     self.db.release_lock(file_name)
-                self._trigger_pause_from_page(p, f"W{w.wid} non_pro_result model={final_model}", force_if_missing=True)
+                self._trigger_pause_from_page(
+                    p, f"W{w.wid} non_pro_result model={final_model}", force_if_missing=True
+                )
                 w.busy = False
                 w.image_path = None
                 w.prompt_text = None
@@ -997,22 +1127,22 @@ class GeminiEngine:
 
         except Exception as e:
             logger.error(f"❌ [W{w.wid}] Collect failed for {file_name}: {e}")
-            
+
             # Save error trace
             # Save error trace
             try:
                 trace_name = f"trace_{self.active_profile_name}_{datetime.now().strftime('%H%M%S')}_{file_name}.zip"
                 trace_path = self.traces_dir / trace_name
-                
+
                 # Get trace bytes (this stops tracing, returns bytes, and restarts tracing)
                 trace_bytes = self.browser.get_trace_bytes()
-                
+
                 if trace_bytes:
                     # Save to disk (for backward compatibility and easy access)
                     trace_path.parent.mkdir(parents=True, exist_ok=True)
                     trace_path.write_bytes(trace_bytes)
                     logger.info(f"📊 [Trace] Saved error trace -> {trace_path.name}")
-                    
+
                     # Log to database
                     if self.pg_enabled:
                         try:
@@ -1023,9 +1153,9 @@ class GeminiEngine:
                                 profile_name=self.active_profile_name,
                                 artifact_type="trace_zip",
                                 content=trace_bytes,
-                                meta={"error": str(e)[:500], "type": "collection_error"}
+                                meta={"error": str(e)[:500], "type": "collection_error"},
                             )
-                            
+
                             # 2. Save metadata for analytics
                             self.db.save_error_trace(
                                 created_at=datetime.now(),
@@ -1036,24 +1166,26 @@ class GeminiEngine:
                                 browser_profile=self.active_profile_name,
                                 browser_id=self.browser_id,
                                 worker_id=w.wid,
-                                error_type='collection_error',
+                                error_type="collection_error",
                                 error_message=str(e)[:500],
                                 trace_file_path=str(trace_path.relative_to(self.job_dir)),
                                 trace_file_size_bytes=len(trace_bytes),
                                 model_label=w.model_label,
                                 execution_mode=self.execution_mode,
-                                ocr_duration_sec=time.time() - w.started_ts if w.started_ts else None
+                                ocr_duration_sec=time.time() - w.started_ts
+                                if w.started_ts
+                                else None,
                             )
                         except Exception as db_err:
                             logger.warning(f"[Trace] Failed to log trace to DB: {db_err}")
             except Exception as trace_err:
                 logger.warning(f"[Trace] Failed to save trace: {trace_err}")
-            
+
             # Save error screenshot (DB + Disk)
             try:
                 file_stem = Path(file_name).stem
                 ss_name = f"error_{datetime.now().strftime('%H%M%S')}_{file_stem}.png"
-                
+
                 # DB Storage
                 if self.pg_enabled:
                     ss_data = self.browser.get_screenshot_bytes(p)
@@ -1063,14 +1195,14 @@ class GeminiEngine:
                         profile_name=self.active_profile_name,
                         artifact_type="screenshot_png",
                         content=ss_data,
-                        meta={"reason": "collection_error", "error": str(e)}
+                        meta={"reason": "collection_error", "error": str(e)},
                     )
-                
+
                 # Disk Storage
                 ss_path = self.artifacts_dir / "screenshots" / ss_name
                 ss_path.parent.mkdir(parents=True, exist_ok=True)
                 self.browser.save_screenshot(p, ss_path)
-                
+
                 # Log video path if available
                 try:
                     video = p.video
@@ -1081,7 +1213,7 @@ class GeminiEngine:
                     pass
             except Exception:
                 pass
-            
+
             self._unlock_file(file_name)
             w.busy = False
             w.image_path = None
@@ -1090,10 +1222,10 @@ class GeminiEngine:
 
     # ---- File Management ----
 
-    def _preload_next_files(self, all_files: List[Path], count: int = 2) -> None:
+    def _preload_next_files(self, all_files: list[Path], count: int = 2) -> None:
         """Preprocess next files in background for faster worker start."""
         sorted_files = sorted(all_files, key=lambda x: x.name)
-        
+
         # Find candidates not yet processed/inflight/preloaded
         candidates = []
         for f in sorted_files:
@@ -1106,7 +1238,7 @@ class GeminiEngine:
             candidates.append(f)
             if len(candidates) >= count:
                 break
-        
+
         # Submit preprocessing for candidates
         for f in candidates:
             logger.debug(f"🔄 [Preload] Starting preprocessing: {f.name}")
@@ -1125,9 +1257,9 @@ class GeminiEngine:
         # Fallback: process synchronously
         return preprocess_image_smart(image_path, self.temp_img_dir)
 
-    def _find_and_lock_next_file(self, all_files: List[Path]) -> Tuple[FileStatus, Optional[Path]]:
+    def _find_and_lock_next_file(self, all_files: list[Path]) -> tuple[FileStatus, Path | None]:
         """Find next file to process, return (status, file) tuple.
-        
+
         Returns:
             (FOUND, path) - File available to process
             (ALL_BUSY, None) - Files exist but all locked by other profiles
@@ -1189,14 +1321,14 @@ class GeminiEngine:
         if self.pg_enabled:
             self.db.release_lock(file_name)
 
-    def _get_images_from_source_dir(self) -> List[Path]:
+    def _get_images_from_source_dir(self) -> list[Path]:
         if not self.source_dir.exists():
             return []
         source_key = str(self.source_dir)
         if self._scan_cursor_source_dir != source_key:
             self._scan_cursor_source_dir = source_key
             self._scan_cursor = 0
-        files: List[Path] = []
+        files: list[Path] = []
         for ext in ["*.jpg", "*.jpeg", "*.png", "*.webp"]:
             files.extend(self.source_dir.glob(ext))
         return sorted(list(set(files)), key=lambda x: x.name)
@@ -1213,7 +1345,9 @@ class GeminiEngine:
             return False
         last_updated = stats.get("last_updated")
         if not last_updated:
-            logger.info(f"ℹ️ [Counts] Missing last_updated for {self.source_dir}, skipping DB fast-path.")
+            logger.info(
+                f"ℹ️ [Counts] Missing last_updated for {self.source_dir}, skipping DB fast-path."
+            )
             return False
         now = datetime.now(last_updated.tzinfo) if last_updated.tzinfo else datetime.now()
         age_sec = (now - last_updated).total_seconds()
@@ -1231,7 +1365,7 @@ class GeminiEngine:
             return True
         return False
 
-    def _get_next_source_dir(self) -> Optional[Path]:
+    def _get_next_source_dir(self) -> Path | None:
         """Find next source folder in the parent directory (alphabetical)."""
         try:
             parent = self.source_dir.parent
@@ -1254,7 +1388,7 @@ class GeminiEngine:
         """
         if not self.pro_only:
             return
-        
+
         try:
             current_model = self.browser.detect_model_label(w.page)
             if current_model and not re.search(_PRO_MODEL_RE, current_model):
@@ -1262,12 +1396,11 @@ class GeminiEngine:
                     f"[W{w.wid}] ⚠️ Model drifted to {current_model}, switching back to Pro..."
                 )
                 self.browser.ensure_pro_model(
-                    w.page,
-                    has_limit_banner_fn=lambda pg: self._has_limit_banner(pg)
+                    w.page, has_limit_banner_fn=lambda pg: self._has_limit_banner(pg)
                 )
         except Exception as e:
             logger.debug(f"[W{w.wid}] Model verification failed: {e}")
-    
+
     def _has_limit_banner(self, page: Page) -> bool:
         try:
             body = page.locator("body").first
@@ -1279,7 +1412,7 @@ class GeminiEngine:
             pass
         return False
 
-    def _find_limit_banner_page(self, page: Page) -> Optional[Page]:
+    def _find_limit_banner_page(self, page: Page) -> Page | None:
         """Return a page that actually shows the Pro limit banner, if any."""
         try:
             if self._has_limit_banner(page):
@@ -1290,7 +1423,9 @@ class GeminiEngine:
         try:
             self.browser.new_chat(page)
             if self.pro_only:
-                self.browser.ensure_pro_model(page, has_limit_banner_fn=lambda pg: self._has_limit_banner(pg))
+                self.browser.ensure_pro_model(
+                    page, has_limit_banner_fn=lambda pg: self._has_limit_banner(pg)
+                )
             if self._has_limit_banner(page):
                 return page
         except Exception:
@@ -1306,34 +1441,34 @@ class GeminiEngine:
             pass
 
         return None
-    
+
     def _check_all_tabs_for_limit(self) -> bool:
         """
         Check ALL browser tabs for Pro limit message.
         Critical: Limit popup can appear in a different tab than the one worker is using.
-        
+
         Returns True if limit detected on ANY tab.
         """
         try:
             all_pages = self.browser.context.pages
             logger.debug(f"[Limit Check] Scanning {len(all_pages)} tabs for Pro limit...")
-            
+
             for idx, page in enumerate(all_pages):
                 try:
                     if self._has_limit_banner(page):
-                        logger.critical(f"⚠️ [Limit] PRO LIMIT detected on tab #{idx+1}!")
+                        logger.critical(f"⚠️ [Limit] PRO LIMIT detected on tab #{idx + 1}!")
                         # Trigger pause immediately
-                        self._trigger_pause_from_page(page, f"tab_{idx+1}_global_scan")
+                        self._trigger_pause_from_page(page, f"tab_{idx + 1}_global_scan")
                         return True
                 except Exception as e:
-                    logger.warning(f"[Limit Check] Tab #{idx+1} scan failed: {e}")
+                    logger.warning(f"[Limit Check] Tab #{idx + 1} scan failed: {e}")
                     continue
-            
+
             return False
         except Exception as e:
             logger.warning(f"[Limit Check] Global scan failed: {e}")
             return False
-    
+
     def _close_idle_tabs(self) -> None:
         """
         Close tabs that are not being used by any worker.
@@ -1348,9 +1483,8 @@ class GeminiEngine:
                 contexts.extend(self.browser.worker_contexts.values())
                 if self.browser.context:
                     contexts.append(self.browser.context)
-            else:
-                if self.browser.context:
-                    contexts.append(self.browser.context)
+            elif self.browser.context:
+                contexts.append(self.browser.context)
 
             worker_pages = {w.page for w in self.workers if w.page}
             for context in contexts:
@@ -1366,7 +1500,7 @@ class GeminiEngine:
                     keep_pages.update({p for p in worker_pages if p.context == context})
                 else:
                     keep_pages.update(worker_pages)
-                
+
                 # Consistently keep first worker tabs in ALL contexts (shared or isolated)
                 # This protects the active worker pages from cleanup
                 if len(pages) > 0:
@@ -1419,7 +1553,9 @@ class GeminiEngine:
         """Force Pro model selection; pause if limit banner or no-Pro persists."""
         last_label = self.browser.detect_model_label(page) or "unknown"
         for attempt in range(1, self.browser.model_switch_retries + 1):
-            label = self.browser.ensure_pro_model(page, has_limit_banner_fn=lambda pg: self._has_limit_banner(pg))
+            label = self.browser.ensure_pro_model(
+                page, has_limit_banner_fn=lambda pg: self._has_limit_banner(pg)
+            )
             last_label = label or last_label
 
             if self._has_limit_banner(page):
@@ -1436,20 +1572,28 @@ class GeminiEngine:
             except Exception:
                 pass
 
-        self._trigger_pause_from_page(page, f"{context} no_pro_after_retries", force_if_missing=True)
+        self._trigger_pause_from_page(
+            page, f"{context} no_pro_after_retries", force_if_missing=True
+        )
         return last_label
 
-    def _trigger_pause_from_page(self, page: Page, context: str = "", force_if_missing: bool = False) -> None:
+    def _trigger_pause_from_page(
+        self, page: Page, context: str = "", force_if_missing: bool = False
+    ) -> None:
         try:
             target_page = self._find_limit_banner_page(page) if self.pro_only else page
             if not target_page:
                 if force_if_missing:
                     try:
                         if self.pro_only:
-                            self.browser.ensure_pro_model(page, has_limit_banner_fn=lambda pg: self._has_limit_banner(pg))
+                            self.browser.ensure_pro_model(
+                                page, has_limit_banner_fn=lambda pg: self._has_limit_banner(pg)
+                            )
                     except Exception:
                         pass
-                    if self._capture_limit_screenshot(page, f"{context} forced_capture", attempts=6):
+                    if self._capture_limit_screenshot(
+                        page, f"{context} forced_capture", attempts=6
+                    ):
                         target_page = self._find_limit_banner_page(page) if self.pro_only else page
                 else:
                     if self._capture_limit_screenshot(page, f"{context} banner_search"):
@@ -1458,10 +1602,14 @@ class GeminiEngine:
                         logger.warning("⚠️ [Limit] Banner not found, skip pause (no proof).")
                         return
                 if not target_page:
-                    logger.warning("⚠️ [Limit] Banner not found, forcing pause due to non-Pro detection.")
+                    logger.warning(
+                        "⚠️ [Limit] Banner not found, forcing pause due to non-Pro detection."
+                    )
                     if not self._save_pause_screenshot(page, context):
                         logger.warning("⚠️ [Limit] Pause screenshot failed.")
-                    self.limit_handler.pause_until(datetime.now() + timedelta(minutes=15), "non_pro_no_banner")
+                    self.limit_handler.pause_until(
+                        datetime.now() + timedelta(minutes=15), "non_pro_no_banner"
+                    )
                     return
             body = target_page.locator("body").first
             txt = body.inner_text(timeout=2500) if body.count() > 0 else ""
@@ -1482,7 +1630,7 @@ class GeminiEngine:
             path = live_dir / f"{safe_profile}_session.jpg"
             page.screenshot(path=path, type="jpeg", quality=70, full_page=True)
             self._stamp_image(path)
-            
+
             # DB Storage
             if self.pg_enabled:
                 try:
@@ -1493,7 +1641,7 @@ class GeminiEngine:
                         profile_name=self.active_profile_name,
                         artifact_type="screenshot_jpg",
                         content=data,
-                        meta={"type": "session_expired", "context": context}
+                        meta={"type": "session_expired", "context": context},
                     )
                 except Exception:
                     pass
@@ -1518,7 +1666,7 @@ class GeminiEngine:
             path = live_dir / f"{safe_profile}_limit.jpg"
             page.screenshot(path=path, type="jpeg", quality=60, full_page=True)
             self._stamp_image(path)
-            
+
             # DB Storage
             if self.pg_enabled:
                 try:
@@ -1529,7 +1677,7 @@ class GeminiEngine:
                         profile_name=self.active_profile_name,
                         artifact_type="screenshot_jpg",
                         content=data,
-                        meta={"type": "limit_detected", "context": context}
+                        meta={"type": "limit_detected", "context": context},
                     )
                 except Exception:
                     pass
@@ -1552,7 +1700,7 @@ class GeminiEngine:
             path = live_dir / f"{safe_profile}_pause.jpg"
             page.screenshot(path=path, type="jpeg", quality=60, full_page=True)
             self._stamp_image(path)
-            
+
             # DB Storage
             if self.pg_enabled:
                 try:
@@ -1563,7 +1711,7 @@ class GeminiEngine:
                         profile_name=self.active_profile_name,
                         artifact_type="screenshot_jpg",
                         content=data,
-                        meta={"type": "pause_forced", "context": context}
+                        meta={"type": "pause_forced", "context": context},
                     )
                 except Exception:
                     pass
@@ -1597,11 +1745,16 @@ class GeminiEngine:
                 draw = ImageDraw.Draw(img)
                 font = ImageFont.load_default()
                 draw.text((24, 24), message, fill=(220, 80, 80), font=font)
-                draw.text((24, 48), datetime.now().strftime("%Y-%m-%d %H:%M:%S"), fill=(200, 200, 200), font=font)
+                draw.text(
+                    (24, 48),
+                    datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    fill=(200, 200, 200),
+                    font=font,
+                )
                 img.save(path, "JPEG", quality=80)
             except Exception:
                 pass
-        
+
         # Save to DB (optional)
         if self.pg_enabled and path.exists():
             try:
@@ -1612,7 +1765,7 @@ class GeminiEngine:
                     profile_name=self.active_profile_name,
                     artifact_type="screenshot_jpg",
                     content=data,
-                    meta={"type": "startup_error", "reason": reason}
+                    meta={"type": "startup_error", "reason": reason},
                 )
             except Exception:
                 pass
@@ -1658,7 +1811,9 @@ class GeminiEngine:
                 return True
             self._limit_retry_count += 1
             wait_s = self._next_backoff_seconds(self._limit_retry_count)
-            logger.warning(f"⚠️ [Limit] Retry capture in {wait_s}s (attempt {self._limit_retry_count}).")
+            logger.warning(
+                f"⚠️ [Limit] Retry capture in {wait_s}s (attempt {self._limit_retry_count})."
+            )
             time.sleep(wait_s)
             try:
                 target_page.reload(wait_until="domcontentloaded")
@@ -1675,7 +1830,9 @@ class GeminiEngine:
                 return True
             self._session_retry_count += 1
             wait_s = self._next_backoff_seconds(self._session_retry_count)
-            logger.warning(f"⚠️ [Session] Retry capture in {wait_s}s (attempt {self._session_retry_count}).")
+            logger.warning(
+                f"⚠️ [Session] Retry capture in {wait_s}s (attempt {self._session_retry_count})."
+            )
             time.sleep(wait_s)
         return False
 
@@ -1683,62 +1840,67 @@ class GeminiEngine:
         """
         Verify limit status from page on startup.
         Returns True if limit is active and we should wait.
-        
+
         CRITICAL: Reads ACTUAL page state, not trusted stored timestamps.
         """
         logger.info("🔍 [Limit Check] Verifying limit status on startup...")
         self.last_limit_check_ts = time.time()
-        
+
         # Check first worker tab
         if not self.workers:
             return False
-        
+
         page = self.workers[0].page
         try:
             if self.pro_only:
                 # Ensure Pro is selected so banner contains real reset time.
-                self.browser.ensure_pro_model(page, has_limit_banner_fn=lambda pg: self._has_limit_banner(pg))
+                self.browser.ensure_pro_model(
+                    page, has_limit_banner_fn=lambda pg: self._has_limit_banner(pg)
+                )
             # Get current page text
             body = page.locator("body").first
             if body.count() == 0:
                 return False
-                
+
             body_text = body.inner_text(timeout=5000)
-            
+
             if re.search(PRO_LIMIT_TEXT_RE, body_text):
                 if not self._capture_limit_screenshot(page, "startup_verified", attempts=6):
                     logger.warning("⚠️ [Limit Check] Screenshot missing, skip pause (no proof).")
                     return False
                 # Limit detected - extract REAL reset time from page
                 reset_time = self.limit_handler.extract_reset_datetime_from_text(body_text)
-                
+
                 if reset_time:
-                    logger.warning(f"⚠️ [Limit Check] PRO LIMIT ACTIVE. Reset at {reset_time.strftime('%H:%M')} (from page)")
+                    logger.warning(
+                        f"⚠️ [Limit Check] PRO LIMIT ACTIVE. Reset at {reset_time.strftime('%H:%M')} (from page)"
+                    )
                     # Update pause file with real time + buffer
-                    self.limit_handler.set_pause_until(reset_time + timedelta(seconds=self.limit_handler.pause_buffer_sec), "startup_verified")
+                    self.limit_handler.set_pause_until(
+                        reset_time + timedelta(seconds=self.limit_handler.pause_buffer_sec),
+                        "startup_verified",
+                    )
                     return True
-                else:
-                    logger.warning("⚠️ [Limit Check] PRO LIMIT ACTIVE but could not parse reset time")
-                    return True
-            else:
-                # No limit - clear any stale pause state
-                logger.info("✅ [Limit Check] No limit detected. Clearing stale pause data.")
-                try:
-                    if self.limit_handler.db:
-                        self.limit_handler.set_profile_state(
-                            self.active_profile_name, 
-                            is_paused=False,
-                            pause_until=None,
-                            meta={"action": "clear_stale_limit", "pid": os.getpid()}
-                        )
-                except Exception:
-                    pass
-                return False
-                
+                logger.warning("⚠️ [Limit Check] PRO LIMIT ACTIVE but could not parse reset time")
+                return True
+            # No limit - clear any stale pause state
+            logger.info("✅ [Limit Check] No limit detected. Clearing stale pause data.")
+            try:
+                if self.limit_handler.db:
+                    self.limit_handler.set_profile_state(
+                        self.active_profile_name,
+                        is_paused=False,
+                        pause_until=None,
+                        meta={"action": "clear_stale_limit", "pid": os.getpid()},
+                    )
+            except Exception:
+                pass
+            return False
+
         except Exception as e:
             logger.warning(f"[Limit Check] Startup verification failed: {e}")
             return False
-    
+
     def _periodic_limit_check(self) -> bool:
         """
         Periodic check (every hour) to verify limit status is still accurate.
@@ -1748,11 +1910,11 @@ class GeminiEngine:
         # Check every N seconds
         if now - self.last_limit_check_ts < self.limit_check_interval_sec:
             return False
-        
+
         mins = max(1, int(self.limit_check_interval_sec / 60))
         logger.info(f"🔄 [Limit Check] Periodic verification (every {mins}m)...")
         self.last_limit_check_ts = now
-        
+
         # Use first idle worker or any worker
         check_page = None
         for w in self.workers:
@@ -1761,51 +1923,57 @@ class GeminiEngine:
                 break
         if not check_page and self.workers:
             check_page = self.workers[0].page
-        
+
         if not check_page:
             return False
-        
+
         try:
             if self.pro_only:
                 # Ensure Pro is selected so banner contains real reset time.
-                self.browser.ensure_pro_model(check_page, has_limit_banner_fn=lambda pg: self._has_limit_banner(pg))
+                self.browser.ensure_pro_model(
+                    check_page, has_limit_banner_fn=lambda pg: self._has_limit_banner(pg)
+                )
             body = check_page.locator("body").first
             if body.count() == 0:
                 return False
-            
+
             body_text = body.inner_text(timeout=5000)
-            
+
             if re.search(PRO_LIMIT_TEXT_RE, body_text):
                 if not self._capture_limit_screenshot(check_page, "periodic_verified", attempts=6):
                     logger.warning("⚠️ [Limit Check] Screenshot missing, skip pause (no proof).")
                     return False
                 reset_time = self.limit_handler.extract_reset_datetime_from_text(body_text)
                 stored_until = self.limit_handler.get_pause_until()
-                
+
                 if reset_time:
                     # Update with fresh reset time if different
                     if not stored_until or abs((reset_time - stored_until).total_seconds()) > 300:
-                        logger.info(f"📝 [Limit Check] Updating reset time to: {reset_time.strftime('%H:%M')} (was: {stored_until.strftime('%H:%M') if stored_until else 'none'})")
-                        self.limit_handler.set_pause_until(reset_time + timedelta(seconds=self.limit_handler.pause_buffer_sec), "periodic_verified")
-                
+                        logger.info(
+                            f"📝 [Limit Check] Updating reset time to: {reset_time.strftime('%H:%M')} (was: {stored_until.strftime('%H:%M') if stored_until else 'none'})"
+                        )
+                        self.limit_handler.set_pause_until(
+                            reset_time + timedelta(seconds=self.limit_handler.pause_buffer_sec),
+                            "periodic_verified",
+                        )
+
                 return True
-            else:
-                # Limit cleared - update if we had pause active
-                stored_until = self.limit_handler.get_pause_until()
-                if stored_until and stored_until > datetime.now():
-                    logger.info("✅ [Limit Check] Limit cleared early! Removing pause.")
-                    try:
-                        if self.limit_handler.db:
-                            self.limit_handler.set_profile_state(
-                                self.active_profile_name,
-                                is_paused=False,
-                                pause_until=None,
-                                meta={"action": "clear_early_limit", "pid": os.getpid()}
-                            )
-                    except Exception:
-                        pass
-                return False
-                
+            # Limit cleared - update if we had pause active
+            stored_until = self.limit_handler.get_pause_until()
+            if stored_until and stored_until > datetime.now():
+                logger.info("✅ [Limit Check] Limit cleared early! Removing pause.")
+                try:
+                    if self.limit_handler.db:
+                        self.limit_handler.set_profile_state(
+                            self.active_profile_name,
+                            is_paused=False,
+                            pause_until=None,
+                            meta={"action": "clear_early_limit", "pid": os.getpid()},
+                        )
+                except Exception:
+                    pass
+            return False
+
         except Exception as e:
             logger.warning(f"[Limit Check] Periodic check failed: {e}")
             return False
@@ -1858,7 +2026,9 @@ class GeminiEngine:
                 "processed_files": sorted(self._processed_local),
             }
             self.progress_file.parent.mkdir(parents=True, exist_ok=True)
-            self.progress_file.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+            self.progress_file.write_text(
+                json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
+            )
         except Exception as e:
             logger.warning(f"[Progress] Cannot save progress.json: {e}")
 
@@ -1875,35 +2045,43 @@ class GeminiEngine:
     def _save_artifact(self, filename: str, content: str):
         # Save to disk
         (self.artifacts_dir / filename).write_text(content, encoding="utf-8")
-        
+
         # Save to DB
         if self.pg_enabled:
             try:
                 # Infer type
                 atype = "text_plain"
-                if filename.endswith(".html"): atype = "html_dump"
-                elif filename.endswith(".json"): atype = "json_dump"
-                elif filename.endswith(".log"): atype = "text_log"
-                
+                if filename.endswith(".html"):
+                    atype = "html_dump"
+                elif filename.endswith(".json"):
+                    atype = "json_dump"
+                elif filename.endswith(".log"):
+                    atype = "text_log"
+
                 self.db.save_artifact(
                     batch_id=self.batch_id,
                     file_name=filename,
                     profile_name=self.active_profile_name,
                     artifact_type=atype,
                     content=content.encode("utf-8"),
-                    meta={}
+                    meta={},
                 )
             except Exception as e:
                 logger.warning(f"[Artifact] Failed to save {filename} to DB: {e}")
 
     def _write_status(self, technical_state: str, stage: str, error=None):
-        payload = {"engine": "gemini_modular", "state": technical_state, "stage": stage, "batch": self.batch_id}
+        payload = {
+            "engine": "gemini_modular",
+            "state": technical_state,
+            "stage": stage,
+            "batch": self.batch_id,
+        }
         if error:
             payload["error"] = error
         with open(self.status_file, "w", encoding="utf-8") as f:
             json.dump(payload, f, ensure_ascii=False)
 
-    def _guess_page_no(self, p: Path) -> Optional[int]:
+    def _guess_page_no(self, p: Path) -> int | None:
         try:
             return int(re.search(r"(\d+)(?!.*\d)", p.stem).group(1))
         except Exception:

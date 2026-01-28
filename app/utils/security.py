@@ -59,8 +59,8 @@ def validate_profile_name(profile: str) -> str:
     
     profile = profile.strip()
     
-    # Allow only: alphanumeric, underscore, hyphen (NO dots to prevent path traversal)
-    if not re.match(r'^[a-zA-Z0-9_\-]+$', profile):
+    # Allow only: alphanumeric, underscore, hyphen, dot
+    if not re.match(r'^[a-zA-Z0-9_\-.]+$', profile):
         raise ValueError(f"Invalid profile name format: {profile}")
     
     # Prevent path traversal attempts

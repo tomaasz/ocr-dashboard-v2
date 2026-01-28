@@ -76,6 +76,7 @@ exclude = [
     ".ruff_cache",
     "build",
     "dist",
+    ".agent",
 ]
 
 [tool.ruff.lint.per-file-ignores]

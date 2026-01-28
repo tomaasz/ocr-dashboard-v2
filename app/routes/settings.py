@@ -138,23 +138,131 @@ async def set_x11_display_setting(display: str):
 @router.get("/default-source-path")
 async def get_default_source_path():
     """Get default source path from environment."""
-    default_path = os.environ.get("OCR_DEFAULT_SOURCE_PATH", "")
-    return {"path": default_path}
+    # 1. Próba pobrania z bazy danych (pierwszy katalog wymagający OCR)
+    try:
+        from ..utils.db import execute_single
+
+        query = """
+            SELECT source_path 
+            FROM v_source_path_stats 
+            WHERE remaining_to_ocr > 0 
+            ORDER BY source_path ASC 
+            LIMIT 1
+        """
+        row = execute_single(query)
+        if row and row[0]:
+            path = str(row[0]).strip()
+            # Sprawdź czy ścieżka fizycznie istnieje (opcjonalne, ale dobre dla UX)
+            if os.path.exists(path):
+                return {"path": path}
+    except Exception:
+        # Ignorujemy błędy DB (np. brak połączenia) i idziemy do fallbacków
+        pass
+
+    # 2. Lista zmiennych środowiskowych do sprawdzenia w kolejności priorytetu
+    env_vars = ["OCR_DEFAULT_SOURCE_PATH", "OCR_REMOTE_SOURCE_DIR", "OCR_SOURCE_DIR"]
+
+    for var in env_vars:
+        path = os.environ.get(var, "")
+        if path:
+            return {"path": path}
+
+    # Fallback: sprawdź czy istnieje katalog 'source' w katalogu domowym
+    home = Path.home()
+    source_dir = home / "source"
+    if source_dir.exists() and source_dir.is_dir():
+        return {"path": str(source_dir)}
+
+    # Ostateczny fallback: katalog domowy
+    return {"path": str(home)}
 
 
 @router.post("/restart")
 async def restart_application():
     """Restart the application by exiting the process (systemd will restart it)."""
+    import asyncio
     import signal
+    import subprocess
+    import time
 
-    # Schedule restart after response is sent
-    def do_restart():
+    from ..services import process as process_service
+
+    # Best-effort activity logging
+    try:
+        from ocr_engine.utils.activity_logger import ActivityLogger
+
+        ActivityLogger().log_restart(
+            component="web_dashboard",
+            reason="Manual restart triggered via dashboard API",
+        )
+    except Exception:
+        pass
+
+    project_root = Path(__file__).parents[2]
+    start_script = project_root / "scripts" / "start_web.sh"
+    restart_log = project_root / "logs" / "restart.log"
+
+    def _stop_workers_best_effort() -> None:
+        """Terminate OCR worker processes and related browser helpers."""
+        patterns = [
+            "python3 run.py",
+            "python run.py",
+            "playwright/driver/node",
+            "cli.js run-driver",
+            "chrome-linux64/chrome",
+            "chromium",
+            "google-chrome",
+            "Xvfb",
+            "xvfb-run",
+        ]
+        pids = process_service.find_pids_by_patterns(patterns)
+        for pid in pids:
+            process_service.terminate_pid(pid)
+
+        # Give processes a moment to exit before restart
+        time.sleep(1.0)
+
+    def do_restart() -> None:
+        """
+        If not under systemd, spawn a new instance via start_web.sh,
+        then terminate this process. Under systemd, just exit and let it restart.
+        """
+        _stop_workers_best_effort()
+        try:
+            # systemd sets INVOCATION_ID for services
+            under_systemd = bool(os.environ.get("INVOCATION_ID"))
+        except Exception:
+            under_systemd = False
+
+        if not under_systemd and start_script.exists():
+            try:
+                restart_log.parent.mkdir(parents=True, exist_ok=True)
+                out = open(restart_log, "a", encoding="utf-8")
+            except Exception:
+                out = subprocess.DEVNULL
+
+            try:
+                subprocess.Popen(
+                    ["/bin/bash", str(start_script)],
+                    cwd=str(project_root),
+                    start_new_session=True,
+                    stdout=out,
+                    stderr=subprocess.STDOUT,
+                )
+            except Exception:
+                pass
+
+        # Graceful shutdown first
         os.kill(os.getpid(), signal.SIGTERM)
 
-    # Use background task or just return success
-    # The systemd service will restart the process
-    import asyncio
+        # Fallback hard exit if graceful shutdown hangs
+        try:
+            time.sleep(3)
+            os.kill(os.getpid(), signal.SIGKILL)
+        except Exception:
+            pass
 
+    # Schedule restart after response is sent
     asyncio.create_task(asyncio.sleep(0.5)).add_done_callback(lambda _: do_restart())
 
     return {"success": True, "message": "Aplikacja zostanie zrestartowana za chwilę"}

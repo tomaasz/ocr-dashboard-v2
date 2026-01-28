@@ -24,8 +24,21 @@ Open: http://localhost:9090/v2
 | `OCR_PG_DSN` | PostgreSQL connection string | - |
 | `OCR_REMOTE_HOST` | Remote worker host | - |
 | `OCR_DEFAULT_WORKERS` | Default workers per profile | 2 |
+| `OCR_AUTO_LOGIN` | Enable automatic re-authentication | true |
 
 See [docs/CONFIGURATION.md](docs/CONFIGURATION.md) for full list.
+
+### Auto-Login Setup
+
+**Important**: To prevent profiles from crashing when Google sessions expire, configure auto-login:
+
+```bash
+# Copy and edit credentials file
+cp config/credentials.json.example config/credentials.json
+# Add your Google credentials and 2FA secret
+```
+
+See [config/README.md](config/README.md) for detailed setup instructions.
 
 ## Project Structure
 

@@ -1,0 +1,5 @@
+# Ignore credentials file (contains sensitive data)
+credentials.json
+
+# Keep example file
+!credentials.json.example

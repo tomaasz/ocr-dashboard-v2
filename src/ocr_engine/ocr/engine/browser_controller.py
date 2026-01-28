@@ -729,7 +729,7 @@ print("DEBUG_end_chrome_resolve");
                 # Check if we're logged out
                 if self._is_logged_out(first_page):
                     logger.warning("⚠️ [Browser] SESSION EXPIRED during clean start!")
-                    
+
                     # Try auto-login if enabled and credentials available
                     if self.auto_login_enabled and self.auto_login.can_auto_login():
                         logger.info("[Browser] Attempting auto-login...")
@@ -741,10 +741,29 @@ print("DEBUG_end_chrome_resolve");
                                 time.sleep(1)
                         else:
                             logger.critical("❌ [Browser] Auto-login FAILED!")
-                            raise SessionExpiredError("Auto-login failed. Check credentials in config/credentials.json")
+                            logger.critical("💡 [Browser] Verify credentials in config/credentials.json")
+                            logger.critical("💡 [Browser] Or disable auto-login: export OCR_AUTO_LOGIN=0")
+                            raise SessionExpiredError(
+                                "Auto-login failed. Verify credentials in config/credentials.json or disable auto-login (OCR_AUTO_LOGIN=0)"
+                            )
                     else:
-                        logger.critical("❌ [Browser] No auto-login credentials. Run headed mode to relogin.")
-                        raise SessionExpiredError("Google session expired. Run headed mode to relogin or configure auto-login.")
+                        if self.auto_login_enabled:
+                            # Auto-login is enabled but credentials are missing
+                            logger.critical("❌ [Browser] Auto-login enabled but credentials missing!")
+                            logger.critical("💡 [Browser] Create config/credentials.json from config/credentials.json.example")
+                            logger.critical("💡 [Browser] Or disable auto-login: export OCR_AUTO_LOGIN=0")
+                            logger.critical("💡 [Browser] Or run in headed mode to login manually")
+                            raise SessionExpiredError(
+                                "Google session expired. Create config/credentials.json from example file, "
+                                "disable auto-login (OCR_AUTO_LOGIN=0), or run headed mode to login manually."
+                            )
+                        else:
+                            # Auto-login is disabled
+                            logger.critical("❌ [Browser] Session expired and auto-login is disabled.")
+                            logger.critical("💡 [Browser] Run headed mode to login manually: --headed")
+                            raise SessionExpiredError(
+                                "Google session expired. Run headed mode to login manually (--headed flag)."
+                            )
 
             # Ensure second tab is clean
             if len(all_pages) > 1:

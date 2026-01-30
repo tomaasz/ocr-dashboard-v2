@@ -14,7 +14,9 @@ if [ -f ".env" ]; then
     export $(grep -v '^#' .env | xargs)
 fi
 
-PORT="${OCR_DASHBOARD_PORT:-9091}"
+export OCR_RUNNING_IN_WRAPPER=1
+
+PORT="${OCR_DASHBOARD_PORT:-9090}"
 
 echo "🚀 Starting OCR Dashboard V2 on port $PORT..."
 echo "🔄 Auto-restart enabled - server will restart automatically after shutdown"
@@ -37,4 +39,3 @@ while true; do
     echo "🔄 Restarting in 2 seconds..."
     sleep 2
 done
-

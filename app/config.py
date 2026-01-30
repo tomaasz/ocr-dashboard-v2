@@ -56,7 +56,7 @@ REMOTE_DESKTOP_ENABLED = bool(REMOTE_DESKTOP_HOST)
 WSL_SHARE_PROFILE = os.environ.get("OCR_WSL_SHARE_PROFILE", "0") == "1"
 
 # Remote Browser Configuration
-REMOTE_BROWSER_HOST = os.environ.get("OCR_REMOTE_BROWSER_HOST", "100.102.158.100")
+REMOTE_BROWSER_HOST = os.environ.get("OCR_REMOTE_BROWSER_HOST")
 REMOTE_BROWSER_USER = os.environ.get("OCR_REMOTE_BROWSER_USER") or os.environ.get("USER")
 REMOTE_BROWSER_PROFILE_ROOT = os.environ.get(
     "OCR_REMOTE_BROWSER_PROFILE_ROOT",
@@ -73,7 +73,7 @@ REMOTE_BROWSER_SSH_OPTS = os.environ.get(
     "-o BatchMode=yes -o ConnectTimeout=8 -o StrictHostKeyChecking=no",
 )
 REMOTE_BROWSER_LOCAL_PORT_BASE = os.environ.get("OCR_REMOTE_BROWSER_LOCAL_PORT_BASE", "18222")
-REMOTE_BROWSER_TUNNEL = os.environ.get("OCR_REMOTE_BROWSER_TUNNEL", "1")
+REMOTE_BROWSER_TUNNEL = os.environ.get("OCR_REMOTE_BROWSER_TUNNEL", "0")
 REMOTE_BROWSER_CHROME_BIN = os.environ.get("OCR_REMOTE_BROWSER_CHROME_BIN")
 
 # Limit Check
@@ -99,6 +99,8 @@ FORCE_ALL_PROFILES_PRO = os.environ.get("OCR_FORCE_ALL_PROFILES_PRO", "0") == "1
 # Cache Files
 AUTO_RESTART_CONFIG_FILE = CACHE_DIR / "auto_restart_farm.json"
 X11_DISPLAY_CONFIG_FILE = CACHE_DIR / "x11_display.json"
+REMOTE_HOSTS_CONFIG_FILE = CACHE_DIR / "remote_hosts.json"
 PRECHECK_STATUS_FILE = CACHE_DIR / "limit_precheck_status.json"
 PRECHECK_HISTORY_FILE = CACHE_DIR / "limit_precheck_history.json"
 UPDATE_COUNTS_TS_FILE = CACHE_DIR / "update_counts_last_run.txt"
+PENDING_CLEANUP_FILE = CACHE_DIR / "pending_cleanup.json"

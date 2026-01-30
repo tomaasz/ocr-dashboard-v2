@@ -12,10 +12,89 @@ source venv/bin/activate
 pip install -r requirements.txt
 
 # Run
-./scripts/start_web.sh
+OCR_DASHBOARD_PORT=9090 ./scripts/start_web.sh
 ```
 
 Open: http://localhost:9090/v2
+
+## Repo Layout (Single Repo)
+
+This project uses a single working copy per host that is actively developed and
+kept in sync with `origin/main`.
+
+Expected paths:
+
+- **Linux/WSL**: `~/ocr-dashboard-v2`
+- **Windows**: `C:\Dev\ocr-dashboard-v2`
+
+## Automation (Sync + Reminders)
+
+On Ubuntu servers, systemd timers keep the runtime clone in sync and send commit
+reminders. On Windows, Task Scheduler provides the same behavior.
+
+Scripts:
+
+- `scripts/auto_sync_runtime.sh` (runtime auto-pull)
+- `scripts/commit_reminder.sh` (commit reminder / optional auto-commit)
+- `scripts/push_retry.sh` (retry push if clean)
+
+Systemd units:
+
+- `scripts/systemd/ocr-dashboard-auto-sync.*`
+- `scripts/systemd/ocr-dashboard-commit-reminder.*`
+- `scripts/systemd/ocr-dashboard-auto-commit.*`
+- `scripts/systemd/ocr-dashboard-push-retry.*`
+
+## Restart & Sanity Check
+
+After pulling changes on the runtime host:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart ocr-dashboard.service
+sudo systemctl status ocr-dashboard.service --no-pager
+```
+
+Quick local check:
+
+```bash
+curl -I http://127.0.0.1:9090/
+```
+
+If you see a 200/302/405 response, the app is running. A 500 usually indicates a template
+or settings error; check `journalctl -u ocr-dashboard.service -n 100 --no-pager`.
+
+## Host Workflow (Where to Work)
+
+Work directly in the main repo (`ocr-dashboard-v2`) and keep it clean so
+auto-sync can pull updates safely.
+
+Quick paths:
+
+- Linux/WSL: `~/ocr-dashboard-v2`
+- Windows: `C:\Dev\ocr-dashboard-v2`
+
+Suggested update flow:
+
+1) Commit locally in `ocr-dashboard-v2`.
+2) Push to GitHub.
+3) Auto-sync pulls from `origin/main` (or run `git pull` manually).
+
+## Remote Hosts Settings (UI-backed)
+
+Remote hosts configuration is editable from the UI at:
+
+```
+/#settings
+```
+
+Values are stored in:
+
+```
+~/.cache/ocr-dashboard-v2/remote_hosts.json
+```
+
+Environment variables are used as a fallback (see `docs/CONFIGURATION.md`).
 
 ## Configuration
 
